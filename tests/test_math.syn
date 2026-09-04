@@ -1,0 +1,17 @@
+# Synapse Core Arithmetic Tests
+fn test_addition():
+    let a = 15
+    let b = 27
+    assert_eq(a + b, 42)
+
+fn test_multiplication():
+    let x = 6
+    let y = 7
+    assert(x * y == 42)
+
+fn test_assertions():
+    assert_true(10 > 5)
+    assert_false(5 > 10)
+    assert_gt(100, 50)
+    assert_lt(20, 30)
+    assert_ne(1, 2)

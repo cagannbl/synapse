@@ -1,0 +1,155 @@
+# =============================================================================
+# Synapse Industrial Showcase 02: HPC High-Frequency Streaming Pipeline
+# (Apache Arrow IPC mmap, LazyFrame Filter Pushdown & CSP Channels)
+# =============================================================================
+
+print("==================================================================")
+print("Synapse HPC Streaming Pipeline & High-Frequency Telemetry Engine")
+print("==================================================================")
+
+# -----------------------------------------------------------------------------
+# 1. High-Frequency Market Tick Stream Data Generation
+# -----------------------------------------------------------------------------
+print("\n[Stage 1] Generating High-Frequency Financial Tick Batch...")
+
+let tick_ids = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010]
+let symbols = ["BTC/USDT", "ETH/USDT", "NVDA/USD", "BTC/USDT", "SOL/USDT", "ETH/USDT", "AAPL/USD", "NVDA/USD", "BTC/USDT", "SOL/USDT"]
+let bids = [64250.0, 3450.2, 128.5, 64251.5, 142.1, 3451.0, 224.8, 128.9, 64248.0, 142.4]
+let asks = [64250.8, 3450.9, 128.6, 64252.8, 142.3, 3451.8, 224.9, 129.1, 64249.2, 142.6]
+let spreads = [0.80, 0.70, 0.10, 1.30, 0.20, 0.80, 0.10, 0.20, 1.20, 0.20]
+let volumes = [1500, 850, 4200, 3100, 950, 1800, 5600, 2900, 2400, 1100]
+let latencies = [12, 15, 8, 22, 18, 11, 7, 9, 14, 16]
+
+let raw_df = DataFrame({
+    "tick_id": tick_ids,
+    "symbol": symbols,
+    "bid": bids,
+    "ask": asks,
+    "spread": spreads,
+    "volume": volumes,
+    "latency_us": latencies
+})
+
+print("Generated In-Memory DataFrame Shape:", raw_df.shape)
+print("Columns:", raw_df.columns)
+
+# -----------------------------------------------------------------------------
+# 2. Apache Arrow IPC Binary Serialization & Memory-Mapped Reading (mmap)
+# -----------------------------------------------------------------------------
+print("\n[Stage 2] Zero-Copy Apache Arrow IPC Memory-Mapping (mmap)...")
+
+let arrow_ipc_file = "market_telemetry.arrow"
+
+# Write columnar DataFrame directly to Apache Arrow IPC format
+write_arrow_ipc(raw_df, arrow_ipc_file)
+print("Serialized DataFrame to Arrow IPC format:", arrow_ipc_file)
+
+# Memory-map the binary file with zero-copy buffer access
+let mmap_df = read_arrow_ipc(arrow_ipc_file, mmap=true)
+print("Memory-Mapped Arrow DataFrame Loaded with mmap=True.")
+print("Mapped Records Count:", len(mmap_df))
+print("First Tick Symbol (Zero-Copy):", mmap_df["symbol"][0])
+print("First Tick Spread (Zero-Copy):", mmap_df["spread"][0])
+
+# -----------------------------------------------------------------------------
+# 3. LazyFrame & Filter Pushdown Query Plan Optimization
+# -----------------------------------------------------------------------------
+print("\n[Stage 3] Executing LazyFrame Query with Filter Pushdown...")
+
+# Build declarative lazy execution plan
+# Filter pushdown ensures spread and volume predicates execute at scan time,
+# eliminating unnecessary row allocations before sorting.
+let query_plan = mmap_df.lazy().filter(col("spread") >= 0.50).filter(col("volume") >= 1000).sort(columns=["spread", "volume"], ascending=[false, false]).limit(3).select("tick_id", "symbol", "spread", "volume")
+
+print("Lazy Query Plan Built: FilterPushdown -> Sort -> Limit(3) -> Select")
+
+# Materialize optimized result
+let anomaly_ticks = query_plan.collect()
+print("Materialized Anomaly Ticks Shape:", anomaly_ticks.shape)
+print("Columns:", anomaly_ticks.columns)
+print("Top Spread Anomaly Ticks (Pushdown Filtered):")
+print("  Tick IDs:", list(anomaly_ticks["tick_id"]))
+print("  Symbols :", list(anomaly_ticks["symbol"]))
+print("  Spreads :", list(anomaly_ticks["spread"]))
+print("  Volumes :", list(anomaly_ticks["volume"]))
+
+# Close memory-mapped file descriptor safely
+mmap_df.close()
+
+# -----------------------------------------------------------------------------
+# 4. CSP Communicating Sequential Processes (spawn + channel) Pipeline
+# -----------------------------------------------------------------------------
+print("\n[Stage 4] Launching High-Concurrency CSP Streaming Pipeline...")
+
+# Shared non-blocking CSP communication channels
+let market_channel = channel(capacity=16)
+let alert_channel = channel(capacity=16)
+
+# Producer: Streams raw market events into CSP channel
+fn producer_routine():
+    let events = [
+        {"id": 201, "sym": "NVDA", "px": 128.50, "sp": 0.05, "vol": 2500},
+        {"id": 202, "sym": "BTC",  "px": 64300.0, "sp": 1.50, "vol": 3200},
+        {"id": 203, "sym": "ETH",  "px": 3460.0,  "sp": 0.85, "vol": 1400},
+        {"id": 204, "sym": "SOL",  "px": 143.20,  "sp": 0.25, "vol": 800},
+        {"id": 205, "sym": "BTC",  "px": 64310.0, "sp": 2.10, "vol": 4100}
+    ]
+    let i = 0
+    while i < len(events):
+        market_channel.send(events[i])
+        i += 1
+    market_channel.close()
+    return "PRODUCER_DONE"
+
+# Consumer & Anomaly Detector: Filter high-spread volatility
+fn detector_routine():
+    let processed = 0
+    let anomalies = 0
+    let running = true
+    while running:
+        let item = market_channel.try_recv()
+        if item != None:
+            processed += 1
+            if item["sp"] >= 1.0:
+                alert_channel.send(item)
+                anomalies += 1
+        elif market_channel.is_closed():
+            running = false
+    alert_channel.close()
+    return {"processed": processed, "anomalies": anomalies}
+
+# Spawn worker threads (No-GIL / Work-Stealing scheduler)
+let prod_fut = spawn(producer_routine)
+let det_fut = spawn(detector_routine)
+
+# Wait for pipeline execution
+let prod_status = prod_fut.result()
+let det_stats = det_fut.result()
+
+print("Producer Routine Status:", prod_status)
+print("Detector Processed Ticks:", det_stats["processed"])
+print("High-Volatility Alerts Forwarded:", det_stats["anomalies"])
+
+# Collect alerts from sink channel
+let collected_alerts = []
+let sink_running = true
+while sink_running:
+    let alert = alert_channel.try_recv()
+    if alert != None:
+        collected_alerts.append(alert)
+    elif alert_channel.is_closed():
+        sink_running = false
+
+print("Alert Sink Buffer Received:", len(collected_alerts), "critical market alerts:")
+let k = 0
+while k < len(collected_alerts):
+    let a = collected_alerts[k]
+    print("  * Alert [#" + str(a["id"]) + "] " + a["sym"] + " Spread: $" + str(a["sp"]) + " Vol: " + str(a["vol"]))
+    k += 1
+
+# -----------------------------------------------------------------------------
+# 5. Pipeline Telemetry Summary
+# -----------------------------------------------------------------------------
+print("\n==================================================================")
+print("HPC Streaming Pipeline Successfully Executed with 0-Copy & No-GIL!")
+print("==================================================================")

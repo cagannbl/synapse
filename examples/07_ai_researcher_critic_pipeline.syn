@@ -1,0 +1,96 @@
+# =============================================================================
+# Synapse AI Pipeline: Researcher |> Critic & Native Vector Memory
+# =============================================================================
+
+print("==================================================================")
+print("Synapse: Otonom AI Ajan Boru Hatti (|>) ve Vektor Bellek Mimarisi")
+print("==================================================================")
+
+# -----------------------------------------------------------------------------
+# 1. Ajan Tanimlari (Autonomous Agents)
+# -----------------------------------------------------------------------------
+# 'Researcher': Yapay zekadaki son atilimlari, test-time compute, akil yurutme
+# (reasoning) modellerini ve bellek mimarilerini derinlemesine arastirir.
+agent Researcher:
+    model: "gpt-4o"
+    instructions: "You are an elite AI Researcher specializing in cutting-edge breakthroughs. Investigate the latest advances in artificial intelligence, focusing on reasoning models (o1/o3, DeepSeek R1), test-time compute scaling, native vector memory operating systems, and autonomous multi-agent swarms. Formulate structured, insightful research findings."
+
+# 'Critic': Researcher ajaninin bulgularini metodolojik dogruluk, teknik tutarlilik,
+# halusinasyon kontrolu ve uygulanabilirlik acisindan denetler ve rafine eder.
+agent Critic:
+    model: "claude-3-5-sonnet"
+    instructions: "You are a Rigorous Technical Critic and Senior Reviewer. Audit the research findings provided by the Researcher agent. Verify empirical rigor, point out limitations or architectural bottlenecks, eliminate speculative fluff, and deliver an approved, high-confidence synthesized report."
+
+# -----------------------------------------------------------------------------
+# 2. Fonksiyonel Boru Hatti Zinciri (Pipeline Chaining: |>)
+# -----------------------------------------------------------------------------
+# Girdi -> Researcher -> Critic akisi Synapse dilinin yerlesik '|>' operatoru ile
+# dogrudan tek bir fonksiyonel zincir olarak kosturulur:
+# Esdegeri: Critic(Researcher(task_topic))
+print("\n[Adim 1] Ajan boru hatti baslatiliyor: Topic |> Researcher |> Critic...")
+
+let research_topic = "Analyze recent AI innovations: test-time compute scaling in reasoning models (DeepSeek R1, OpenAI o3), persistent in-memory vector stores, and multi-agent coordination pipelines."
+
+let pipeline_result = research_topic |> Researcher |> Critic
+
+print("\n--- Boru Hatti Nihai Ciktisi (Critic Tarafindan Denetlenmis Rapor) ---")
+print(pipeline_result)
+
+# -----------------------------------------------------------------------------
+# 3. Yerlesik Vektor Bellek (Native Vector Memory & Storage)
+# -----------------------------------------------------------------------------
+# Sifir harici servis (Chroma/Pinecone/Docker gereksiz), dogrudan Synapse calisma
+# zamaninda calisan TF-IDF + n-gram + Cosine Similarity destekli vektor bellek.
+print("\n[Adim 2] Bulgular yerlesik vektor bellege (memory) indeksleniyor...")
+
+let brain = memory()
+
+# Ajan boru hattindan gelen onayli nihai bulguyu bellege kaydet
+brain.remember(pipeline_result, metadata={"category": "pipeline_output", "reviewed_by": "Critic", "status": "approved"})
+
+# Detayli anlamsal aramalari zenginlestirmek icin tamamlayici arastirma kayitlari ekle
+brain.remember("DeepSeek-R1 and OpenAI o3 leverage reinforcement learning test-time compute scaling, enabling models to perform extensive chain-of-thought verification before responding.", metadata={"category": "reasoning_models", "impact": "high"})
+
+brain.remember("In-memory semantic vector stores offer zero-dependency instant retrieval for autonomous agents, eliminating latency and network overhead of external vector databases.", metadata={"category": "vector_memory", "impact": "high"})
+
+brain.remember("Autonomous agent pipelines using functional composition (|>) guarantee predictable state propagation, cognitive division of labor, and adversarial peer review.", metadata={"category": "multi_agent_pipeline", "impact": "architectural"})
+
+brain.remember("Synapse autograd engine performs reverse-mode automatic differentiation natively on computational graphs with zero Python GIL contention.", metadata={"category": "compiler_autograd", "impact": "core"})
+
+print("Vektor bellekte saklanan toplam kayit sayisi:", brain.count())
+
+# -----------------------------------------------------------------------------
+# 4. Anlamsal Vektor Test Sorgulari (Semantic Recall & Verification)
+# -----------------------------------------------------------------------------
+print("\n[Adim 3] Bellek uzerinde test sorgulari yurutuluyor...")
+
+# Test Sorgusu 1: Akil yurutme ve test-time compute
+let query1 = "test-time compute scaling and reasoning models"
+print("\n--- Test Sorgusu 1:", query1, "---")
+let matches1 = brain.recall(query1, top_k=2)
+
+print("Eslesme 1 Metni:", matches1[0]["text"])
+print("Benzerlik Skoru (Cosine):", matches1[0]["score"])
+print("Metadata:", matches1[0]["metadata"])
+
+# Test Sorgusu 2: Vektor bellek ve harici veritabani bagimsizligi
+let query2 = "zero-dependency in-memory vector storage for autonomous agents"
+print("\n--- Test Sorgusu 2:", query2, "---")
+let matches2 = brain.recall(query2, top_k=2)
+
+print("Eslesme 1 Metni:", matches2[0]["text"])
+print("Benzerlik Skoru (Cosine):", matches2[0]["score"])
+print("Metadata:", matches2[0]["metadata"])
+
+# Test Sorgusu 3: Boru hatti denetim ve Critic ciktisi aramasi
+let query3 = "Critic agent audited pipeline synthesis report"
+print("\n--- Test Sorgusu 3:", query3, "---")
+let matches3 = brain.recall(query3, top_k=1)
+
+print("Eslesme 1 Metni:", matches3[0]["text"])
+print("Benzerlik Skoru (Cosine):", matches3[0]["score"])
+print("Metadata:", matches3[0]["metadata"])
+
+print("\n==================================================================")
+print("Synapse Ajan Boru Hatti ve Vektor Bellek Basariyla Tamamlandi!")
+print("==================================================================")

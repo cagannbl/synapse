@@ -1,0 +1,42 @@
+{
+  "title": "Tour of Synapse: 15 Dakikalık Hızlı İnteraktif Tur",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "id": 1,
+      "title": "Adım 1: Modern Sözdizimi & Akıcı Boru Hattı (|\\>)",
+      "description": "Synapse, Unix boru hattı felsefesini modern tip güvenliğiyle birleştirir. `|\\>` operatörü veriyi soldan sağa fonksiyon zincirine aktarır.",
+      "code": "# 1. Modern Pipeline ve Fonksiyonel Donusum\nfn square(x: int) -> int:\n    return x * x\n\nfn add_ten(x: int) -> int:\n    return x + 10\n\nlet num = 5\nlet result = num |> square |> add_ten\n\nprint(\"Orijinal sayi:\", num)\nprint(\"Sonuc:\", result)\n"
+    },
+    {
+      "id": 2,
+      "title": "Adım 2: Statik Şekil Doğrulaması & Matris Çarpımı (@)",
+      "description": "PyTorch'ta çalışma zamanında patlayan matris boyut uyuşmazlıkları, Synapse'te derleme anında cebirsel olarak çözülür.",
+      "code": "# 2. Zero-Crash Static Tensor Shape Contracts\nlet A = tensor([[1.0, 2.0], [3.0, 4.0]])\nlet B = tensor([[5.0, 6.0], [7.0, 8.0]])\n\n# Matmul (@) islemi ve seffaf tensor toplami\nlet C = (A @ B) + 1.0\n\nprint(\"A @ B + 1.0 Matrisi:\")\nprint(C)\n"
+    },
+    {
+      "id": 3,
+      "title": "Adım 3: Deterministik Arena Bellek Kapsamları",
+      "description": "Synapse döngülerde Garbage Collector duraklaması olmadan O(1) sürede bellek geri kazanır. Ara tensörler döngü adımında anında boşaltılır.",
+      "code": "# 3. Deterministic Arena Scope and Zero Leak\nlet total = 0.0\n\nfor i in range(0, 5):\n    let step_tensor = tensor([1.0, 2.0, 3.0]) * (i + 1)\n    let step_sum = step_tensor.sum()\n    total = total + step_sum\n    print(\"Adim:\", i, \"Ara Toplam:\", total)\n\nprint(\"Nihai Toplam:\", total)\n"
+    },
+    {
+      "id": 4,
+      "title": "Adım 4: Pattern Matching (match) & Rust Tarzı ? Operatörü",
+      "description": "Eksik dal bırakmayan (Exhaustive) `match` ifadesi ve güvenli hata yayma operatörü `?` ile çökmeyen iş akışları.",
+      "code": "# 4. Type-Safe Option/Result and Match\nfn find_user_score(id: int) -> Option[int]:\n    if id == 42:\n        return Option.Some(100)\n    return Option.None\n\nlet score_opt = find_user_score(42)\n\nmatch score_opt:\n    case Option.Some(score):\n        print(\"Kullanici skoru bulundu:\", score)\n    case Option.None:\n        print(\"Kullanici bulunamadi.\")\n"
+    },
+    {
+      "id": 5,
+      "title": "Adım 5: No-GIL Eşzamanlılık & CSP Kanalları",
+      "description": "Python'ın GIL bariyeri olmadan, Go/Erlang tarzı hafif görevler (`spawn`) ve tip güvenli `Channel` ile veri iletişimi.",
+      "code": "# 5. No-GIL Lightweight Concurrency and Channels\nlet ch = Channel(2)\n\nfn producer():\n    ch.send(\"Synapse Ajan 1 basariyla tamamlandi.\")\n    ch.send(\"Synapse Ajan 2 veri aktardi.\")\n\nlet worker = spawn(producer)\nlet msg1 = ch.receive()\nlet msg2 = ch.receive()\n\nprint(\"Alinan Mesaj 1:\", msg1)\nprint(\"Alinan Mesaj 2:\", msg2)\n"
+    },
+    {
+      "id": 6,
+      "title": "Adım 6: Sıfır-Kopyalı SafeTensors & Çıkarım",
+      "description": "Hugging Face SafeTensors ikili ağırlıklarını `mmap` ile doğrudan GPU/belleğe sıfır kopyayla eşler.",
+      "code": "# 6. Zero-Copy SafeTensors Header and Weights\nlet weights = tensor([[0.25, -0.4], [0.88, 0.12]])\nlet inputs = tensor([[1.0, 2.0]])\n\nlet logits = inputs @ weights\nprint(\"Model Cikarim Logitleri:\")\nprint(logits)\n"
+    }
+  ]
+}

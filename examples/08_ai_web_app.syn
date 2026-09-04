@@ -1,0 +1,67 @@
+# =============================================================================
+# Synapse Example 08: Native AI Web Server & Interactive Full-Stack Platform
+# =============================================================================
+
+print("==================================================================")
+print("Synapse: Yerlesik AI Web Sunucusu ve Interaktif Web Platformu")
+print("==================================================================")
+
+# 1. Otonom Web Asistan Ajanı
+agent WebAssistant:
+    model: "gpt-4o"
+    instructions: "You are the official Synapse AI Web Assistant. Provide concise, modern, and helpful technical guidance about Synapse AI programming language, autonomous agents, and GPU acceleration."
+
+# 2. Yerleşik Vektör Bellek (RAG) Başlatma
+let brain = memory()
+
+# Başlangıç Bilgilerini Belleğe İndeksle
+brain.remember("Synapse, yapay zekalar tarafindan sifir bagimlilikla kodlanmak uzere tasarlanmis AOT derlenebilir bir dildir.", metadata={"category": "mimari"})
+brain.remember("NVIDIA GeForce RTX 3060 ve CUDA tensör çekirdekleri dogrudan t.to('cuda') ile desteklenmektedir.", metadata={"category": "donanim"})
+brain.remember("Fonksiyonel boru hatti (|>) ile ajanlar Topic |> Researcher |> Critic seklinde baglanir.", metadata={"category": "ajanlar"})
+brain.remember("Language Server Protocol (LSP) sayesinde VS Code uzerinde gercek zamanli self-healing calisir.", metadata={"category": "ekosistem"})
+
+print("[Vektor Bellek] Ilk indeksleme tamamlandi. Toplam kayit:", brain.count())
+
+# 3. HTTP Route İşleyicileri
+fn handle_status(req):
+    return {
+        "status": "online",
+        "device": "CUDA:0 (RTX 3060)",
+        "memory_count": brain.count(),
+        "runtime": "Synapse v2.5 AOT"
+    }
+
+fn handle_chat(req):
+    let user_prompt = req.body.prompt
+    let response_text = user_prompt |> WebAssistant
+    return {
+        "reply": response_text
+    }
+
+fn handle_memory_search(req):
+    let query_text = req.query.q
+    let hits = brain.recall(query_text, top_k=3)
+    return {
+        "query": query_text,
+        "results": hits
+    }
+
+fn handle_memory_remember(req):
+    let new_text = req.body.text
+    let meta = req.body.metadata
+    brain.remember(new_text, metadata=meta)
+    return {
+        "status": "success",
+        "memory_count": brain.count()
+    }
+
+# 4. Yerleşik Web Sunucusunu Başlat (Port 8080)
+print("\n[Web Sunucusu] HTTP Servisi baslatiliyor...")
+print("Tarayicinizdan http://localhost:8080 adresine erisebilirsiniz.\n")
+
+serve(port=8080, routes={
+    "/api/status": handle_status,
+    "/api/chat": handle_chat,
+    "/api/memory/search": handle_memory_search,
+    "/api/memory/remember": handle_memory_remember
+}, static_dir="public", blocking=true)

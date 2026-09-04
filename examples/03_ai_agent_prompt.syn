@@ -1,0 +1,31 @@
+# =============================================================================
+# Synapse Example 03: Native AI Prompts & Autonomous Agent
+# =============================================================================
+
+print("=== Synapse AI Prompts & Agents Demo ===")
+
+# 1. Yerleşik Prompt Tanımı
+prompt analyze_sentiment(review_text):
+    system: "You are an AI sentiment classifier. Return POSITIVE or NEGATIVE."
+    user: review_text
+    temperature: 0.1
+
+let text1 = "Synapse makes AI programming effortless and blazing fast!"
+let text2 = "The legacy interpreter had terrible bugs and slow latency."
+
+print("Analyzing Review 1:", text1)
+let sentiment1 = analyze_sentiment(text1)
+print("Result 1:", sentiment1)
+
+print("Analyzing Review 2:", text2)
+let sentiment2 = analyze_sentiment(text2)
+print("Result 2:", sentiment2)
+
+# 2. Otonom Ajan (Agent) Tanımı
+agent ResearchBot:
+    model: "gpt-4o"
+    instructions: "You specialize in deep learning architectures and compiler optimizations."
+
+print("\nRunning Autonomous Agent Task...")
+let reply = ResearchBot.run("Explain how Synapse eliminates the GIL for tensor operations.")
+print("Agent Response:", reply)

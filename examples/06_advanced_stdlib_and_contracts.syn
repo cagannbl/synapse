@@ -1,0 +1,99 @@
+# =============================================================================
+# Synapse Example 06: Advanced Standard Library, Dot-Notation & AI Contracts
+# (Stage 2 / v2.0+ Architecture Showcase)
+# =============================================================================
+
+print("=== Synapse Stage 2 Advanced Features & Stdlib Showcase ===")
+
+# -----------------------------------------------------------------------------
+# 1. Çok Satırlı Prompt Tanımı (Multiline Triple-Quoted Strings)
+# -----------------------------------------------------------------------------
+print("\n--- 1. Multiline Triple-Quoted Prompt Definition ---")
+
+prompt configure_training_agent(domain_name):
+    system: """You are a senior deep learning architect.
+Your mission is to formulate robust training hyperparameters.
+Always guarantee numerical stability and optimal convergence."""
+    user: domain_name
+    temperature: 0.2
+
+let domain = "Computer Vision and Edge Neural Embeddings"
+print("Invoking prompt with domain:", domain)
+let agent_guidance = configure_training_agent(domain)
+print("AI Architectural Guidance:")
+print(agent_guidance)
+
+# -----------------------------------------------------------------------------
+# 2. Sözlüklerde Nokta Notasyonu ile Okuma & Yazma (LOAD_ATTR / STORE_ATTR)
+# -----------------------------------------------------------------------------
+print("\n--- 2. Dictionary Dot-Notation (Get & Set via LOAD_ATTR / STORE_ATTR) ---")
+
+let cfg = {
+    "model_name": "Synapse-EdgeNet",
+    "lr": 0.01,
+    "epochs": 10,
+    "batch_size": 32,
+    "optimizer": "AdamW"
+}
+
+print("Initial Learning Rate (cfg.lr):", cfg.lr)
+print("Initial Epochs (cfg.epochs):", cfg.epochs)
+
+# Dinamik alan güncelleme ve yeni alan ekleme (STORE_ATTR on dict)
+cfg.lr = 0.001
+cfg.epochs = 5
+cfg.warmup_steps = 150
+cfg.checkpoint_enabled = true
+
+print("Updated Learning Rate (cfg.lr):", cfg.lr)
+print("Updated Epochs (cfg.epochs):", cfg.epochs)
+print("Added Warmup Steps (cfg.warmup_steps):", cfg.warmup_steps)
+print("Full Config Dictionary:", cfg)
+
+# -----------------------------------------------------------------------------
+# 3. Sıfır Bağımlılıklı Dosya G/Ç ve JSON Serileştirme (write_file & read_file)
+# -----------------------------------------------------------------------------
+print("\n--- 3. Standard Library File I/O & JSON Serialization ---")
+
+let checkpoint_path = "model_config_checkpoint.json"
+
+# JSON stringify
+let serialized_json = json_stringify(cfg)
+print("Serialized JSON Output:")
+print(serialized_json)
+
+# Güvenli dosya yazma
+let bytes_written = write_file(checkpoint_path, serialized_json)
+print("Bytes written to disk:", bytes_written)
+print("Checkpoint file exists:", file_exists(checkpoint_path))
+
+# Dosyadan okuma ve JSON parse
+let file_raw_content = read_file(checkpoint_path)
+let restored_cfg = json_parse(file_raw_content)
+
+print("Restored Model Name (restored_cfg.model_name):", restored_cfg.model_name)
+print("Restored Learning Rate (restored_cfg.lr):", restored_cfg.lr)
+print("Restored Epochs (restored_cfg.epochs):", restored_cfg.epochs)
+
+# -----------------------------------------------------------------------------
+# 4. Tensör Matris Çarpımı & İleri Yayılım (Tensor Matrix Multiplication: @)
+# -----------------------------------------------------------------------------
+print("\n--- 4. Tensor Linear Layer & Matrix Multiplication (@) ---")
+
+# Inputs: 2 örnek, 3 özellik (2 x 3)
+let X = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+# Weights: 3 özellik, 2 nöron (3 x 2)
+let W = tensor([[0.2, -0.5], [0.1, 0.4], [0.3, 0.1]], requires_grad=true)
+
+# Matris çarpımı (2x3 @ 3x2 -> 2x2)
+let Y = X @ W
+
+print("Input Tensor X (2x3):", X)
+print("Weight Tensor W (3x2):", W)
+print("Forward Activations Y = X @ W (2x2):", Y)
+
+# -----------------------------------------------------------------------------
+# 5. Başarı Özeti
+# -----------------------------------------------------------------------------
+print("\n=== All Stage 2 Advanced Features Executed Successfully! ===")

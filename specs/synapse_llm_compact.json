@@ -1,0 +1,35 @@
+{
+  "language": "Synapse",
+  "extension": ".syn",
+  "version": "0.2.0",
+  "paradigm": ["imperative", "functional", "ai-native", "differentiable"],
+  "rules": {
+    "indentation": "4 spaces",
+    "semicolons": false,
+    "variable_keywords": ["let", "const"],
+    "function_keyword": "fn",
+    "forbidden_function_keyword": "def",
+    "matrix_multiplication_operator": "@",
+    "pipeline_operator": "|>",
+    "external_imports_forbidden": ["numpy", "torch"],
+    "native_tensor_creators": ["tensor", "zeros", "ones", "randn"],
+    "native_dl_modules": ["Linear", "Sequential", "ReLU", "Sigmoid", "MSELoss", "CrossEntropyLoss", "Adam", "SGD"],
+    "native_ai_keywords": ["prompt", "agent", "tool", "memory", "swarm", "debate"],
+    "python_ffi_prefix": "py."
+  },
+  "drift_fixes": {
+    "def": "fn",
+    "import numpy as np": "# removed: tensors are native",
+    "import torch": "# removed: torch is native",
+    "np.array": "tensor",
+    "torch.tensor": "tensor",
+    "x = 10": "let x = 10"
+  },
+  "canonical_snippets": {
+    "tensor_matmul": "let A = tensor([[1.0, 2.0], [3.0, 4.0]])\nlet B = tensor([[5.0, 6.0], [7.0, 8.0]])\nlet C = A @ B\nprint(C)",
+    "autograd": "let w = tensor(0.5, requires_grad=true)\nlet x = tensor(2.0)\nlet loss = (w * x - 6.0) ** 2\nloss.backward()\nprint(w.grad.item())",
+    "neural_network": "let model = Sequential([Linear(2, 4), ReLU(), Linear(4, 1)])\nlet opt = Adam(model.parameters(), lr=0.01)\nlet loss = MSELoss()(model(X), Y)\nopt.zero_grad()\nloss.backward()\nopt.step()",
+    "prompt_and_agent": "prompt summarize(t: str) -> str:\n    system: \"Summarize:\"\n    user: t\nagent Assistant:\n    model: \"gpt-4o\"\n    instructions: \"Help user.\"",
+    "vector_memory": "let brain = memory()\nbrain.remember(\"Synapse has native tensors.\")\nlet res = brain.recall(\"tensors\", top_k=1)"
+  }
+}

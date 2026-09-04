@@ -1,0 +1,31 @@
+# =============================================================================
+# Synapse Example 01: First-Class Tensor Operations & Pipelines
+# =============================================================================
+
+print("=== Synapse Tensor Engine Demo ===")
+
+# 1. Tensör Tanımlama
+let A = tensor([[1.0, 2.0], [3.0, 4.0]])
+let B = tensor([[5.0, 6.0], [7.0, 8.0]])
+
+print("Tensor A:", A)
+print("Tensor B:", B)
+
+# 2. Matris Çarpımı (@ operatörü)
+let C = A @ B
+print("Matrix Multiplication (A @ B):", C)
+
+# 3. Transpoz ve Temel İstatistikler
+let At = A.T
+print("Transpose of A (A.T):", At)
+print("Sum of C:", C.sum())
+print("Mean of C:", C.mean())
+
+# 4. Pipeline Operatörü (|>) ile Aktivasyon
+fn activate(x):
+    return x.relu()
+
+let raw_data = tensor([-3.0, -1.0, 0.0, 2.0, 5.0])
+let activated = raw_data |> activate
+print("Raw Data:", raw_data)
+print("After ReLU Pipeline (|>):", activated)

@@ -1,0 +1,38 @@
+# =============================================================================
+# Synapse Example 02: Autograd Engine & Model Training
+# =============================================================================
+
+print("=== Synapse Autograd Training Demo ===")
+
+# Model parametresi: w (öğrenilecek ağırlık)
+let w = tensor(0.5, requires_grad=true)
+let lr = 0.05
+
+# Eğitim verisi: x=2.0 -> y_true=6.0 (hedef: w * 2.0 = 6.0 => w=3.0)
+let x = tensor(2.0)
+let y_true = tensor(6.0)
+
+print("Initial weight w:", w.item())
+
+# 15 Adımlık Gradyan İnişi (Gradient Descent)
+let step = 1
+while step <= 15:
+    # İleri yayılım (Forward pass)
+    let y_pred = w * x
+    let diff = y_pred - y_true
+    let loss = diff * diff
+
+    # Geri yayılım (Backward pass)
+    loss.backward()
+
+    # Ağırlık güncelleme: w = w - lr * grad
+    let grad_val = w.grad.item()
+    let new_w_val = w.item() - lr * grad_val
+    w = tensor(new_w_val, requires_grad=true)
+
+    if step % 3 == 0:
+        print("Step", step, "| Loss:", loss.item(), "| Weight w:", w.item())
+
+    step += 1
+
+print("Final Optimized Weight w (Target: 3.0):", w.item())

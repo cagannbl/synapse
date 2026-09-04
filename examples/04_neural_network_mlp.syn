@@ -1,0 +1,55 @@
+# =============================================================================
+# Synapse Example 04: Multi-Layer Perceptron (MLP) with nn & optim
+# =============================================================================
+
+print("=== Synapse Deep Learning (nn & optim) Demo ===")
+
+# 1. Model Mimarisi (2 -> 4 -> 1)
+let model = Sequential([
+    Linear(2, 4),
+    ReLU(),
+    Linear(4, 1)
+])
+
+# 2. Optimizasyon ve Kayıp Fonksiyonu
+let optimizer = Adam(model.parameters(), lr=0.08)
+let criterion = MSELoss()
+
+# 3. Eğitim Verisi (Lineer Olmayan Fonksiyon Tahmini)
+let X = tensor([
+    [1.0, 1.0],
+    [1.0, 2.0],
+    [2.0, 1.0],
+    [2.0, 2.0]
+])
+
+let Y = tensor([
+    [3.0],
+    [5.0],
+    [4.0],
+    [6.0]
+])
+
+print("Model initialized with layers: Linear(2, 4) -> ReLU -> Linear(4, 1)")
+
+# 4. Eğitim Döngüsü (Training Loop)
+let epoch = 1
+while epoch <= 20:
+    # Forward Pass
+    let y_pred = model(X)
+    let loss = criterion(y_pred, Y)
+
+    # Backward Pass & Optimizer Step
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    if epoch % 5 == 0:
+        print("Epoch", epoch, "| MSE Loss:", loss.item())
+
+    epoch += 1
+
+print("\nTraining completed successfully!")
+let test_input = tensor([[1.5, 1.5]])
+let prediction = model(test_input)
+print("Test Input [[1.5, 1.5]] -> Prediction:", prediction.item())

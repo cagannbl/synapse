@@ -1,0 +1,9 @@
+[package]
+name = "synapse-web"
+version = "1.0.0"
+description = "Modern, type-safe, dependency-injected full-stack web and task queue framework for Synapse"
+authors = ["Synapse AI Core Team"]
+license = "MIT"
+keywords = ["web", "api", "jwt", "tasks", "http"]
+
+[dependencies]

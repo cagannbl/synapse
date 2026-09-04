@@ -1,0 +1,76 @@
+# =============================================================================
+# Synapse Language AI Assistant Rules (.cursorrules)
+# =============================================================================
+
+You are an expert compiler and engineer for "Synapse" (.syn), an AI-native programming language.
+When writing or reviewing code, always follow these rules strictly:
+
+## 1. Syntax & Core Semantics
+- **Indentation:** Python-like indentation (4 spaces). NO semicolons (`;`) at line ends. NO curly braces (`{}`) for statement blocks.
+- **Variables:** Always declare with `let` or `const`. Never write bare assignments for new variables.
+  - `let x = 10`
+  - `const BATCH_SIZE = 32`
+- **Functions:** Use `fn` keyword, NEVER `def`.
+  - `fn compute_loss(pred, target):`
+  - Optional return type: `fn add(a: int, b: int) -> int:`
+- **Control Flow:** `if / elif / else:`, `while <cond>:`, `for <item> in <iterable>:` (Pythonic syntax).
+
+## 2. Native Tensors (NO EXTERNAL LIBRARIES)
+- **Zero Imports for Tensors:** NEVER write `import numpy` or `import torch`. Tensors are first-class language primitives.
+- **Factory & Creators:** `tensor(...)`, `zeros(shape)`, `ones(shape)`, `randn(shape)`
+- **Matrix Multiplication:** Always use `@` (e.g. `let C = A @ B`).
+- **Autograd:** `let w = tensor(0.5, requires_grad=true)`. Execute reverse-mode autograd with `loss.backward()`, read grad with `w.grad`.
+- **Properties & Methods:** `.T` (transpose), `.shape`, `.sum()`, `.mean()`, `.relu()`, `.sigmoid()`, `.item()`.
+
+## 3. Pipeline Operator (`|>`)
+- Chain operations cleanly: `let result = data |> relu |> normalize`
+  - Equivalent to: `normalize(relu(data))`
+
+## 4. Deep Learning (`nn` & `optim`)
+- **Layers:** `Linear(in_features, out_features)`, `Sequential([layer1, layer2])`, `ReLU()`, `Sigmoid()`
+- **Losses:** `MSELoss()`, `CrossEntropyLoss()`
+- **Optimizers:** `Adam(model.parameters(), lr=0.001)`, `SGD(model.parameters(), lr=0.01)`
+- **Training Pattern:**
+  ```python
+  let model = Sequential([Linear(2, 4), ReLU(), Linear(4, 1)])
+  let optimizer = Adam(model.parameters(), lr=0.01)
+  let criterion = MSELoss()
+
+  let y_pred = model(X)
+  let loss = criterion(y_pred, Y)
+  optimizer.zero_grad()
+  loss.backward()
+  optimizer.step()
+  ```
+
+## 5. Native AI Prompts & Autonomous Agents
+- **Prompts:** Define LLM calls natively without external HTTP/SDK boilerplate:
+  ```python
+  prompt classify_intent(text: str) -> str:
+      system: "You are an intent classifier. Return greeting or inquiry."
+      user: f"Classify: {text}"
+      temperature: 0.1
+  ```
+- **Tools & Agents:**
+  ```python
+  tool calculate(a, b):
+      return a + b
+
+  agent MathAssistant:
+      model: "gpt-4o"
+      tools: [calculate]
+      instructions: "Solve user queries using available tools."
+
+  let answer = MathAssistant.run("What is 15 + 27?")
+  ```
+
+## 6. Python Interoperability (FFI)
+- Import standard Python packages with the `py.` prefix:
+  - `import py.math as math`
+  - `import py.time as time`
+
+## 7. Strict Negative Constraints (DO NOTS)
+- ❌ NEVER use `def` -> ALWAYS use `fn`.
+- ❌ NEVER use `import torch` or `import numpy` -> Tensörler ve sinir ağları yerleşiktir.
+- ❌ NEVER use `var` -> Sadece `let` ve `const`.
+- ❌ NEVER leave placeholders or `// TODO` -> Always provide complete, working code.

@@ -1,0 +1,60 @@
+{
+  "name": "synapse-lang",
+  "displayName": "Synapse Language Support",
+  "description": "Language support, syntax highlighting, and tooling for the Synapse programming language (.syn)",
+  "version": "1.0.0",
+  "publisher": "synapse",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "synapse",
+        "aliases": [
+          "Synapse",
+          "synapse"
+        ],
+        "extensions": [
+          ".syn"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "synapse",
+        "scopeName": "source.synapse",
+        "path": "./syntaxes/synapse.tmLanguage.json"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "synapse",
+        "label": "Synapse Debugger",
+        "program": "synapse",
+        "args": [
+          "dap"
+        ],
+        "languages": [
+          "synapse"
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Synapse: Launch File",
+            "description": "Debug the active Synapse (.syn) file",
+            "body": {
+              "type": "synapse",
+              "request": "launch",
+              "name": "Debug Synapse File",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

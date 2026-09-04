@@ -1,0 +1,75 @@
+name: "💡 Feature Request / RFC"
+description: "Suggest an idea, syntax proposal, or architectural enhancement for Synapse AI"
+title: "[Feature]: "
+labels: ["enhancement", "rfc"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature for Synapse AI! We design features around our core mission:
+        **Python-like elegance, zero-cost systems performance, standalone C99 output, and compile-time shape safety.**
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem Statement / Motivation"
+      description: "What limitation, friction, or new AI systems use-case does this feature solve?"
+      placeholder: "When working with transformer attention mechanisms, there is currently no native fused scaled dot-product attention primitive..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: syntax_proposal
+    attributes:
+      label: "Proposed Synapse Syntax & API Design"
+      description: "How would developers write this in Synapse? Provide code examples."
+      placeholder: |
+        # Proposed Synapse syntax:
+        let q = tensor([B, H, S, D])
+        let k = tensor([B, H, S, D])
+        let v = tensor([B, H, S, D])
+        let out = nn.scaled_dot_product_attention(q, k, v)
+      render: python
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture_layer
+    attributes:
+      label: "Primary Architectural Subsystem"
+      description: "Which part of the Synapse compiler pipeline does this feature impact?"
+      options:
+        - "Shape Guard & Type Checker (Static Analysis)"
+        - "C99 Emitter & Native AOT Compiler"
+        - "Arena Runtime (synapse_runtime.c / Memory Lifecycle)"
+        - "Autograd & Deep Learning Core (nn / optim)"
+        - "Lexer & Parser (New syntax or operators)"
+        - "Standard Library (Arrow DataFrame / HTTP / OS)"
+        - "Tooling (LSP / DAP / VS Code / MCP)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: c99_feasibility
+    attributes:
+      label: "C99 Transpilation & Standalone Feasibility"
+      description: "How can this feature transpile to clean ISO C99 while maintaining standalone binary sizes (~0.21MB) and zero dynamic allocations?"
+      placeholder: "This can be lowered to a fixed-size arena loop with OpenMP SIMD pragma..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      description: "What other approaches or existing workarounds have you considered?"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: "Willingness to Contribute"
+      options:
+        - label: "I would be interested in submitting a Pull Request for this feature."
+        - label: "I have read the CONTRIBUTING.md guidelines and understand the strict C99 and zero-regression policy."

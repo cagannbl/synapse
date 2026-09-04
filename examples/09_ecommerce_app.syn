@@ -1,0 +1,153 @@
+# =============================================================================
+# Synapse Example 09: Native AI-Powered E-Commerce Platform
+# =============================================================================
+
+print("==================================================================")
+print("Synapse Store: Yerlesik AI & Vektor Bellek Destekli E-Ticaret Platformu")
+print("==================================================================")
+
+# 1. Alışveriş Danışmanı Yapay Zeka Ajanı
+agent ShoppingAdvisor:
+    model: "gpt-4o"
+    instructions: "Sen Synapse Store akıllı alışveriş danışmanısın. Kullanıcının bütçesine, çalışma alışkanlıklarına veya ihtiyaçlarına göre mağazadaki teknoloji ürünlerinden samimi, profesyonel ve net tavsiyelerde bulun."
+
+# 2. Ürün Kataloğu ve Yerleşik Vektör Bellek (Semantik Arama)
+let store_memory = memory()
+
+# Ürün Tanımları
+let p1 = {
+    "id": 1,
+    "name": "Nova Pro Kablosuz Mekanik Klavye",
+    "category": "Klavye",
+    "price": 3490,
+    "rating": 4.9,
+    "reviews": 128,
+    "badge": "Çok Satan",
+    "description": "Gasket-mount yapılı, sessiz linear switchler, RGB aydınlatma ve çift katman ses sönümleme. Gece veya ofiste uzun saatler kod yazarken parmakları yormayan pürüzsüz yazım deneyimi.",
+    "icon": "keyboard",
+    "stock": 16
+}
+
+let p2 = {
+    "id": 2,
+    "name": "Apex Sound ANC Stüdyo Kulaklık",
+    "category": "Ses",
+    "price": 5890,
+    "rating": 4.8,
+    "reviews": 94,
+    "badge": "Yüksek Puan",
+    "description": "Aktif gürültü engelleme (ANC), 45 saat pil ömrü, ultra konforlu hafızalı deri süngerler. Gürültülü ortamlarda odaklanarak derin çalışma (deep work) için sıfır dip ses.",
+    "icon": "headphones",
+    "stock": 9
+}
+
+let p3 = {
+    "id": 3,
+    "name": "UltraView 34'' Kavisli 4K Monitör",
+    "category": "Görüntü",
+    "price": 14500,
+    "rating": 5.0,
+    "reviews": 42,
+    "badge": "Editörün Seçimi",
+    "description": "144Hz yenileme, 21:9 ultra geniş kavisli panel, USB-C 90W tek kablo şarj ve görüntü aktarımı, sRGB %99 renk doğruluğu ve göz koruma mavi ışık filtresi.",
+    "icon": "monitor",
+    "stock": 5
+}
+
+let p4 = {
+    "id": 4,
+    "name": "AeroDesk Motorlu Karbon Çalışma Masası",
+    "category": "Mobilya",
+    "price": 9800,
+    "rating": 4.9,
+    "reviews": 67,
+    "badge": "Ergonomik",
+    "description": "Sessiz çift motorlu elektrikli yükseklik ayarı, 4 kademe hafıza paneli, dahili priz ve kablo kanalı, çizilmez masif ahşap kaplama.",
+    "icon": "table",
+    "stock": 4
+}
+
+let p5 = {
+    "id": 5,
+    "name": "Lumina Akıllı Monitör Işık Çubuğu",
+    "category": "Aydınlatma",
+    "price": 1850,
+    "rating": 4.7,
+    "reviews": 112,
+    "badge": "Fırsat",
+    "description": "Ekrana yansıma yapmayan asimetrik optik ışık açısı, kablosuz masaüstü döner tekerlek kontrolü, otomatik ortam ışığı sensörü ve gece göz yormayan 2700K sıcak mod.",
+    "icon": "lamp",
+    "stock": 24
+}
+
+let p6 = {
+    "id": 6,
+    "name": "Pulse Trio 3'ü 1 Arada Kablosuz Şarj Standı",
+    "category": "Aksesuar",
+    "price": 1350,
+    "rating": 4.8,
+    "reviews": 85,
+    "badge": "Yeni",
+    "description": "Telefon, akıllı saat ve kablosuz kulaklık için aynı anda MagSafe uyumlu 15W hızlı kablosuz şarj ünitesi. Masanızdaki kablo kargaşasını tamamen yok eder.",
+    "icon": "charging",
+    "stock": 31
+}
+
+let all_products = [p1, p2, p3, p4, p5, p6]
+
+# Vektör Belleğe İndeksleme (Semantik RAG Arama için)
+store_memory.remember("Nova Pro Kablosuz Mekanik Klavye - Klavye - Gasket-mount sessiz linear switchler kodlama yazım tuş takımı", metadata=p1)
+store_memory.remember("Apex Sound ANC Stüdyo Kulaklık - Ses - Aktif gürültü engelleme ANC odaklanma deep work sessizlik müzik", metadata=p2)
+store_memory.remember("UltraView 34'' Kavisli 4K Monitör - Görüntü - 144Hz USB-C 4K geniş ekran yazılımcı ekranı kavisli panel", metadata=p3)
+store_memory.remember("AeroDesk Motorlu Karbon Çalışma Masası - Mobilya - Elektrikli ayarlanabilir ergonomik ayakta calisma masa", metadata=p4)
+store_memory.remember("Lumina Akıllı Monitör Işık Çubuğu - Aydınlatma - Ekrana yansıma yapmayan masa lambası gece göz koruma sıcak ışık", metadata=p5)
+store_memory.remember("Pulse Trio 3'ü 1 Arada Kablosuz Şarj Standı - Aksesuar - MagSafe telefon saat kulaklık masa duzeni hızlı şarj", metadata=p6)
+
+print("[Synapse Store] 6 urun basariyla vektor hafizaya indekslendi.")
+
+# 3. HTTP API Rotaları
+fn handle_products(req):
+    return {
+        "status": "success",
+        "total": 6,
+        "products": all_products
+    }
+
+fn handle_search(req):
+    let q = req.query.q
+    if q == "":
+        return {
+            "query": "",
+            "results": all_products
+        }
+    
+    let hits = store_memory.recall(q, top_k=6)
+    return {
+        "query": q,
+        "results": hits
+    }
+
+fn handle_advisor(req):
+    let user_prompt = req.body.prompt
+    let advice = user_prompt |> ShoppingAdvisor
+    return {
+        "advice": advice
+    }
+
+fn handle_checkout(req):
+    let order_id = "SYN-2026-8924"
+    return {
+        "status": "confirmed",
+        "order_id": order_id,
+        "message": "Siparisiniz Synapse cekirdegi tarafindan basariyla islendi!"
+    }
+
+let routes = {
+    "/api/products": handle_products,
+    "/api/search": handle_search,
+    "/api/advisor": handle_advisor,
+    "/api/checkout": handle_checkout
+}
+
+# 4. Sunucuyu Başlat
+serve(port=8080, routes=routes, static_dir="public")

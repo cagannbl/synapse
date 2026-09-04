@@ -1,0 +1,70 @@
+# =============================================================================
+# Synapse Example 05: Next-Gen AI Primitives
+# (Semantic Vector Memory, Multi-Agent Swarms & Functional Agent Piping)
+# =============================================================================
+
+print("=== Synapse Next-Gen AI Primitives Demo ===")
+
+# -----------------------------------------------------------------------------
+# 1. Yerleşik Semantik Vektör Bellek (Native Vector Memory & RAG)
+# -----------------------------------------------------------------------------
+print("\n--- 1. Native Semantic Vector Memory ---")
+let brain = memory()
+
+# Bilgileri hafızaya kaydet (Sıfır harici veritabanı / Sıfır Docker)
+brain.remember("Synapse is an AI-optimized programming language with first-class tensors.", metadata={"category": "intro"})
+brain.remember("Reverse-mode autograd allows computing analytical gradients via backward().", metadata={"category": "math"})
+brain.remember("Autonomous agents in Synapse can collaborate through swarms and debates.", metadata={"category": "agents"})
+
+print("Memory stored items count:", brain.count())
+
+# Anlamsal sorgulama (Cosine similarity)
+let query = "How does autograd calculate gradients?"
+print("Querying memory for:", query)
+let results = brain.recall(query, top_k=1)
+print("Top memory match:", results[0]["text"])
+print("Match confidence score:", results[0]["score"])
+
+# -----------------------------------------------------------------------------
+# 2. Çoklu Ajan Sürüsü (Multi-Agent Swarm)
+# -----------------------------------------------------------------------------
+print("\n--- 2. Multi-Agent Swarm ---")
+
+agent ArchitectBot:
+    model: "gpt-4o"
+    instructions: "You are a software architect focusing on modularity and type safety."
+
+agent PerformanceBot:
+    model: "claude-3-5-sonnet"
+    instructions: "You are a performance engineer focusing on SIMD and zero-allocation."
+
+let swarm_task = "Analyze the advantages of zero-dependency tensor compilers."
+let swarm_summary = swarm([ArchitectBot, PerformanceBot], swarm_task)
+print(swarm_summary)
+
+# -----------------------------------------------------------------------------
+# 3. Çoklu Ajan Tartışması & Konsensüs (Multi-Agent Debate)
+# -----------------------------------------------------------------------------
+print("\n--- 3. Multi-Agent Debate & Consensus ---")
+
+let debate_topic = "Should deep learning tensors be dynamically or statically shaped?"
+let consensus = debate([ArchitectBot, PerformanceBot], debate_topic, rounds=2)
+print(consensus)
+
+# -----------------------------------------------------------------------------
+# 4. Fonksiyonel Ajan Boru Hattı (Pipeline Chaining: |>)
+# -----------------------------------------------------------------------------
+print("\n--- 4. Functional Agent Chaining (|>) ---")
+
+agent GeneratorBot:
+    model: "mock-model"
+    instructions: "Generate a concept summary."
+
+agent RefinerBot:
+    model: "mock-model"
+    instructions: "Refine and polish the given summary."
+
+let pipeline_result = "Create an AI compiler" |> GeneratorBot |> RefinerBot
+print("Pipeline Final Output:", pipeline_result)
+
+print("\nAll next-gen primitives executed successfully!")

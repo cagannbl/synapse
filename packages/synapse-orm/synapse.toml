@@ -1,0 +1,9 @@
+[package]
+name = "synapse-orm"
+version = "1.0.0"
+description = "Type-safe Active-Record ORM with SQLite, PostgreSQL, and MySQL dialects for Synapse"
+authors = ["Synapse AI Core Team"]
+license = "MIT"
+keywords = ["orm", "database", "sqlite", "postgres", "mysql"]
+
+[dependencies]

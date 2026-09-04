@@ -1,0 +1,114 @@
+(* =============================================================================
+   SYNAPSE PROGRAMMING LANGUAGE - FORMAL EBNF SPECIFICATION
+   An AI-Optimized, Python-like Programming Language
+   ============================================================================= *)
+
+program             = { statement | NEWLINE } ;
+
+statement           = simple_stmt | compound_stmt ;
+
+simple_stmt         = ( expr_stmt
+                      | var_decl_stmt
+                      | assign_stmt
+                      | return_stmt
+                      | import_stmt
+                      | pass_stmt
+                      | break_stmt
+                      | continue_stmt ) ( NEWLINE | ";" ) ;
+
+compound_stmt       = function_def
+                      | if_stmt
+                      | while_stmt
+                      | for_stmt
+                      | prompt_def
+                      | agent_def
+                      | tool_def ;
+
+(* Variable Declarations & Assignments *)
+var_decl_stmt       = ( "let" | "const" ) IDENTIFIER [ ":" type_annotation ] "=" expression ;
+assign_stmt         = target_expr ( "=" | "+=" | "-=" | "*=" | "/=" | "@=" ) expression ;
+target_expr         = IDENTIFIER [ "[" expression "]" | "." IDENTIFIER ] ;
+
+(* Imports: Supports native and Python interop *)
+import_stmt         = "import" module_name [ "as" IDENTIFIER ]
+                      | "from" module_name "import" IDENTIFIER { "," IDENTIFIER } ;
+module_name         = [ "py." ] IDENTIFIER { "." IDENTIFIER } ;
+
+(* Control Flow *)
+if_stmt             = "if" expression ":" suite
+                      { "elif" expression ":" suite }
+                      [ "else" ":" suite ] ;
+
+while_stmt          = "while" expression ":" suite ;
+for_stmt            = "for" IDENTIFIER "in" expression ":" suite ;
+return_stmt         = "return" [ expression ] ;
+pass_stmt           = "pass" ;
+break_stmt          = "break" ;
+continue_stmt       = "continue" ;
+
+suite               = simple_stmt | NEWLINE INDENT statement { statement } DEDENT ;
+
+(* Functions & Parameters *)
+function_def        = "fn" IDENTIFIER "(" [ param_list ] ")" [ "->" type_annotation ] ":" suite ;
+param_list          = param { "," param } ;
+param               = IDENTIFIER [ ":" type_annotation ] [ "=" expression ] ;
+
+(* AI-Native: Prompt Definition *)
+prompt_def          = "prompt" IDENTIFIER "(" [ param_list ] ")" [ "->" type_annotation ] ":" NEWLINE INDENT prompt_body DEDENT ;
+prompt_body         = { prompt_field_stmt } ;
+prompt_field_stmt   = IDENTIFIER ":" expression NEWLINE ;
+
+(* AI-Native: Agent & Tool Definition *)
+agent_def           = "agent" IDENTIFIER ":" NEWLINE INDENT { agent_field_stmt } DEDENT ;
+agent_field_stmt    = IDENTIFIER ":" expression NEWLINE ;
+
+tool_def            = "tool" IDENTIFIER "(" [ param_list ] ")" [ "->" type_annotation ] ":" suite ;
+
+(* Expressions & Precedence *)
+expression          = pipe_expr ;
+pipe_expr           = logical_or { "|>" logical_or } ;
+logical_or          = logical_and { "or" logical_and } ;
+logical_and         = equality { "and" equality } ;
+equality            = relational { ( "==" | "!=" ) relational } ;
+relational          = additive { ( "<" | "<=" | ">" | ">=" ) additive } ;
+additive            = multiplicative { ( "+" | "-" ) multiplicative } ;
+multiplicative      = unary { ( "*" | "/" | "%" | "//" | "@" ) unary } ;
+unary               = ( "-" | "+" | "not" ) unary | primary ;
+
+primary             = atom { call_suffix | index_suffix | attr_suffix } ;
+call_suffix         = "(" [ arg_list ] ")" ;
+index_suffix        = "[" expression [ ":" [ expression ] ] "]" ;
+attr_suffix         = "." IDENTIFIER ;
+
+arg_list            = argument { "," argument } ;
+argument            = [ IDENTIFIER "=" ] expression ;
+
+atom                = IDENTIFIER
+                      | NUMBER
+                      | STRING
+                      | BOOLEAN
+                      | "none"
+                      | tensor_literal
+                      | list_literal
+                      | dict_literal
+                      | "(" expression ")" ;
+
+(* AI / Tensor Literals *)
+tensor_literal      = "tensor" "(" ( list_literal | expression ) [ "," tensor_options ] ")" ;
+tensor_options      = { IDENTIFIER "=" expression } ;
+
+list_literal        = "[" [ expression { "," expression } ] "]" ;
+dict_literal        = "{" [ dict_entry { "," dict_entry } ] "}" ;
+dict_entry          = expression ":" expression ;
+
+(* Type Annotations *)
+type_annotation     = IDENTIFIER [ "[" type_annotation { "," type_annotation } "]" ] ;
+
+(* Tokens *)
+IDENTIFIER          = ( [a-zA-Z_] ) { [a-zA-Z0-9_] } ;
+NUMBER              = [0-9]+ [ "." [0-9]+ ] [ ( "e" | "E" ) [ "+" | "-" ] [0-9]+ ] ;
+STRING              = ( '"' { any_char } '"' ) | ( "'" { any_char } "'" ) ;
+BOOLEAN             = "true" | "false" ;
+NEWLINE             = ? newline character ? ;
+INDENT              = ? generated indentation token ? ;
+DEDENT              = ? generated dedentation token ? ;

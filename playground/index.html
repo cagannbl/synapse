@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synapse WebAssembly Interactive Playground</title>
+    <meta name="description" content="Synapse Dilinin WebAssembly AOT ve Tek İş Parçacıklı Cooperative CSP Motoru Canlı İnteraktif Playground'u.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #09090b;
+            --card-bg: #0f0f12;
+            --card-hover: #141418;
+            --border: #27272a;
+            --border-subtle: #1e1e24;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Nav & Header */
+        header {
+            background: rgba(9, 9, 11, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+            border: 1px solid #3f3f46;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-tag {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: #18181b;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            font-family: var(--font-mono);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: rgba(24, 24, 27, 0.6);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--warning);
+            transition: all 0.2s ease;
+        }
+
+        .status-dot.ready {
+            background: var(--success);
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+        }
+
+        .status-dot.running {
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+            animation: pulse 1.2s infinite;
+        }
+
+        .status-dot.error {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.9); }
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #0d0d10;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .toolbar-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .select-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 420px;
+        }
+
+        select {
+            width: 100%;
+            background: #121215;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 32px 7px 12px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        select:hover {
+            border-color: #3f3f46;
+            background: #16161a;
+        }
+
+        select:focus {
+            border-color: #52525b;
+            box-shadow: 0 0 0 1px #52525b;
+        }
+
+        .select-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+            border: 1px solid transparent;
+            font-family: var(--font-sans);
+            user-select: none;
+        }
+
+        .btn-primary {
+            background: #fafafa;
+            color: #09090b;
+            border-color: #fafafa;
+        }
+
+        .btn-primary:hover {
+            background: #e4e4e7;
+            border-color: #e4e4e7;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #18181b;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #27272a;
+            border-color: #3f3f46;
+        }
+
+        .btn-tour {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-tour:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .tour-banner {
+            display: none;
+            background: #121215;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 24px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .tour-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .tour-badge {
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-family: var(--font-mono);
+        }
+
+        .tour-desc {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .tour-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        /* Workspace Grid */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 0;
+            height: calc(100vh - 112px);
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+                height: auto;
+                min-height: calc(100vh - 112px);
+            }
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            position: relative;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .panel:last-child {
+            border-right: none;
+        }
+
+        .panel-header {
+            background: #0c0c0f;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 38px;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .panel-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Editor Area */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            background: #09090b;
+        }
+
+        .line-numbers {
+            width: 44px;
+            padding: 16px 8px 16px 0;
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 22px;
+            color: #3f3f46;
+            user-select: none;
+            background: #09090b;
+            border-right: 1px solid var(--border-subtle);
+            overflow: hidden;
+        }
+
+        .code-textarea {
+            flex: 1;
+            background: transparent;
+            color: #ececed;
+            border: none;
+            padding: 16px 16px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 22px;
+            resize: none;
+            outline: none;
+            white-space: pre;
+            overflow: auto;
+            tab-size: 4;
+        }
+
+        .code-textarea::selection {
+            background: rgba(59, 130, 246, 0.25);
+        }
+
+        /* Terminal Console */
+        .terminal-container {
+            flex: 1;
+            background: #050507;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            line-height: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .log-time {
+            color: #52525b;
+            font-size: 11px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            color: #d4d4d8;
+            flex: 1;
+        }
+
+        .log-info .log-text { color: #60a5fa; }
+        .log-stderr .log-text { color: #f87171; }
+        .log-success .log-text { color: #4ade80; }
+        .log-stream .log-text { color: #cbd5e1; }
+
+        /* Panel Footer Strip */
+        .panel-footer {
+            background: #0c0c0f;
+            border-top: 1px solid var(--border);
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .meta-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <header>
+        <div class="nav-brand">
+            <div class="logo-icon">S</div>
+            <div class="brand-title">
+                <span>Synapse</span>
+                <span style="color: var(--text-muted); font-weight: 400;">/</span>
+                <span style="font-weight: 500; color: #d4d4d8;">WASM Playground</span>
+            </div>
+            <span class="badge-tag">v1.5.0-wasm</span>
+        </div>
+
+        <div class="nav-actions">
+            <div id="memoryPill" class="badge-tag" style="display: none;">Heap: 64 KB</div>
+            <div class="status-pill">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="statusText">WASM Başlatılıyor...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Interactive Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <span class="toolbar-label">Örnek:</span>
+            <div class="select-wrapper">
+                <select id="exampleSelector" onchange="loadSelectedExample()">
+                    <option value="1">1. Tensor Matris Çarpımı &amp; Autograd Türev Grafı</option>
+                    <option value="2">2. AI Prompt &amp; Gerçek Zamanlı Token Akışı (Stream)</option>
+                    <option value="3">3. LazyFrame Veri Akışı (Apache Arrow &amp; Filter)</option>
+                    <option value="4">4. No-GIL CSP Kanalları (Cooperative Microtask Queue)</option>
+                </select>
+                <span class="select-icon">&#9662;</span>
+            </div>
+        </div>
+
+        <div class="toolbar-right">
+            <button id="tourBtn" class="btn btn-tour" onclick="toggleTourMode()">
+                <span>🎓 Tour of Synapse</span>
+            </button>
+            <button id="runBtn" class="btn btn-primary" onclick="runCode()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Çalıştır (Run)</span>
+            </button>
+            <button id="resetBtn" class="btn btn-secondary" onclick="resetEditor()">
+                <span>Sıfırla (Reset)</span>
+            </button>
+            <button id="clearBtn" class="btn btn-secondary" onclick="clearTerminal()">
+                <span>Terminali Temizle</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tour of Synapse Banner -->
+    <div id="tourBanner" class="tour-banner">
+        <div class="tour-info">
+            <span id="tourBadge" class="tour-badge">Adım 1 / 6</span>
+            <strong id="tourTitle">Boru Hattı (|&gt;)</strong>
+            <span id="tourDesc" class="tour-desc">Açıklama yükleniyor...</span>
+        </div>
+        <div class="tour-nav">
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="prevTourStep()">&larr; Önceki</button>
+            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="nextTourStep()">Sonraki &rarr;</button>
+        </div>
+    </div>
+
+    <!-- Main Workspace (Editor + Output Terminal) -->
+    <main>
+        <!-- Editor Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>main.syn</span>
+                </div>
+                <div class="panel-meta">
+                    <span id="lineCountLabel">1 satır</span>
+                    <span>&bull;</span>
+                    <span>Ctrl + Enter</span>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <div id="lineNumbers" class="line-numbers">1</div>
+                <textarea id="codeEditor" class="code-textarea" spellcheck="false" placeholder="# Synapse kodunuzu buraya yazın..."></textarea>
+            </div>
+
+            <div class="panel-footer">
+                <div class="meta-pill">
+                    <span>Hedef: WebAssembly (SIMD128 / Microtasks)</span>
+                </div>
+                <div class="meta-pill">
+                    <span>UTF-8 &bull; 4 Boşluk Tab</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Output Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                        <path d="M7 15h10M7 9l3 3-3 3"></path>
+                    </svg>
+                    <span>STDOUT / STDERR Konsolu</span>
+                </div>
+                <div class="panel-meta">
+                    <button class="btn btn-secondary btn-sm" onclick="copyConsoleOutput()">Kopyala</button>
+                </div>
+            </div>
+
+            <div id="terminal" class="terminal-container">
+                <div class="log-entry log-info">
+                    <span class="log-time">[00:00:00]</span>
+                    <span class="log-text">[Synapse WASM] Web Worker arka plan iş parçacığı hazırlanıyor...</span>
+                </div>
+            </div>
+
+            <div class="panel-footer">
+                <div class="meta-pill">
+                    <span id="execTiming">Süre: 0.00 ms</span>
+                </div>
+                <div class="meta-pill">
+                    <span id="eventLoopStatus">CSP Kuyruğu: 0 Bekleyen</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Preset Example Source Codes
+        const EXAMPLES = {
+            "1": `# 1. Tensor Matris Çarpımı & Autograd Türev Grafı
+# Donanım seviyesinde AOT derlenen N-Boyutlu Tensör Aritmetiği
+let A = tensor([[1.5, 2.0], [3.0, 4.5]], requires_grad=True)
+let B = tensor([[2.0, -1.0], [0.5, 3.0]], requires_grad=True)
+
+# Matris Çarpımı (@) ve Transpoze (.T)
+let C = A @ B.T
+let loss = (C * 2.0).sum()
+
+print("--- [Synapse Tensor Engine] ---")
+print("Matris A:")
+A.print()
+print("Matris B (Transpoze):")
+B.T.print()
+print("Matris C = A @ B.T:")
+C.print()
+print("Hesaplanan Kayıp (Loss): " + str(loss.item()))
+
+# Autograd Geri Yayılımı (Backward Pass)
+loss.backward()
+print("Grad A (dLoss / dA):")
+A.grad.print()`,
+
+            "2": `# 2. AI Prompt & Gerçek Zamanlı Token Akışı
+# Dil seviyesinde yerleşik LLM prompt motoru ve asenkron SSE/token akışı
+
+prompt Translator(target_lang: str, text: str):
+    system: "You are an ultra-fast AI translator specialized in programming."
+    user: "Translate the following text to " + target_lang + ":\\n" + text
+
+let source_text = "Synapse delivers C-speed execution with Pythonic elegance and zero GIL overhead."
+print("Hedef Dil: Türkçe")
+print("Kaynak Metin: " + source_text)
+print("--- [Token Akışı Başlatılıyor...] ---")
+
+# Akış simülasyonu
+let stream = Translator("Türkçe", source_text).stream()
+for token in stream:
+    print_stream(token)
+
+print("\\n--- [Çıkarım Tamamlandı: 24 token, 142 tok/s] ---")`,
+
+            "3": `# 3. LazyFrame Veri Akışı (Apache Arrow Tablo & Filtreleme)
+# Sütun bazlı (columnar) bellek düzeni ve sıfır kopyalı tensör dönüşümü
+
+let df = dataframe.from_records([
+    {"device": "cuda:0", "flops_tflops": 82.5, "latency_ms": 1.42, "status": "active"},
+    {"device": "cuda:1", "flops_tflops": 83.1, "latency_ms": 1.39, "status": "active"},
+    {"device": "cpu:0",  "flops_tflops": 12.4, "latency_ms": 9.80, "status": "idle"},
+    {"device": "wasm:0", "flops_tflops": 24.8, "latency_ms": 4.15, "status": "active"},
+    {"device": "mps:0",  "flops_tflops": 64.0, "latency_ms": 2.10, "status": "active"}
+])
+
+print("--- [Orijinal Veri Kümesi] ---")
+df.show()
+
+# Lazy Pipeline: Filter + Projection + Mean
+let summary = df.filter(col("status") == "active")
+               .filter(col("flops_tflops") > 20.0)
+               .select(["device", "flops_tflops", "latency_ms"])
+
+print("--- [Filtrelenmiş Hızlandırıcılar] ---")
+summary.show()
+
+let avg_flops = summary.col("flops_tflops").mean()
+print("Ortalama Aktif TFLOPS: " + str(avg_flops))`,
+
+            "4": `# 4. No-GIL CSP Kanalları & Mikro-Görev Kuyruğu (WASM Cooperative)
+# WebAssembly tarayıcı ortamında bloke olmadan FIFO işleyen kanal mimarisi
+
+let ch = channel(capacity=4)
+
+fn producer(out_ch, count):
+    print("[Producer] Veri üretimi başlatıldı...")
+    for i in range(1, count + 1):
+        let val = "Neural_Tensor_Batch_#" + str(i)
+        print("[Producer] Kanala gönderiliyor: " + val)
+        out_ch.send(val)
+    out_ch.close()
+    print("[Producer] Kanal kapatıldı.")
+
+fn consumer(in_ch):
+    print("[Consumer] Veri dinleniyor...")
+    while not in_ch.is_closed():
+        let item = in_ch.recv()
+        if item is not None:
+            print("[Consumer] Alındı ve işlendi -> " + str(item))
+    print("[Consumer] Tüketim döngüsü tamamlandı.")
+
+# Görevleri kooperatif zamanlayıcıya ekle
+spawn(producer, ch, 4)
+spawn(consumer, ch)
+
+print("--- [CSP Olay Döngüsü Çalıştırılıyor] ---")`
+        };
+
+        // DOM References
+        const editor = document.getElementById('codeEditor');
+        const lineNumbers = document.getElementById('lineNumbers');
+        const lineCountLabel = document.getElementById('lineCountLabel');
+        const exampleSelector = document.getElementById('exampleSelector');
+        const terminal = document.getElementById('terminal');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const runBtn = document.getElementById('runBtn');
+        const execTiming = document.getElementById('execTiming');
+        const memoryPill = document.getElementById('memoryPill');
+
+        let worker = null;
+        let isRunning = false;
+        let currentChunkTarget = null;
+
+        // Initialize Web Worker
+        function initWorker() {
+            try {
+                worker = new Worker('worker.js');
+
+                worker.onmessage = function (e) {
+                    const data = e.data || {};
+                    const type = data.type;
+
+                    if (type === 'ready') {
+                        setEngineStatus('ready', 'WASM Hazır (Ready)');
+                        appendTerminal(data.info || '[Synapse WASM] Runtime hazır.', 'info');
+                    } else if (type === 'stdout') {
+                        currentChunkTarget = null;
+                        appendTerminal(data.text, 'stdout');
+                    } else if (type === 'stderr') {
+                        currentChunkTarget = null;
+                        appendTerminal(data.text, 'stderr');
+                    } else if (type === 'info') {
+                        currentChunkTarget = null;
+                        appendTerminal(data.text, 'info');
+                    } else if (type === 'stdout_chunk') {
+                        appendStreamChunk(data.text);
+                    } else if (type === 'done') {
+                        currentChunkTarget = null;
+                        setEngineStatus('ready', 'WASM Hazır (Ready)');
+                        isRunning = false;
+                        runBtn.disabled = false;
+                        runBtn.style.opacity = '1';
+                        if (data.duration) {
+                            execTiming.textContent = `Süre: ${data.duration.toFixed(2)} ms`;
+                        }
+                        if (data.memory) {
+                            memoryPill.style.display = 'inline-block';
+                            memoryPill.textContent = `Heap: ${data.memory}`;
+                        }
+                    } else if (type === 'error') {
+                        currentChunkTarget = null;
+                        setEngineStatus('error', 'Hata Oluştu');
+                        appendTerminal(`[HATA] ${data.error}`, 'stderr');
+                        isRunning = false;
+                        runBtn.disabled = false;
+                        runBtn.style.opacity = '1';
+                    }
+                };
+
+                worker.onerror = function (err) {
+                    setEngineStatus('error', 'Worker Hatası');
+                    appendTerminal(`[Worker Error]: ${err.message || 'Bilinmeyen hata'}`, 'stderr');
+                    isRunning = false;
+                    runBtn.disabled = false;
+                    runBtn.style.opacity = '1';
+                };
+
+                worker.postMessage({ type: 'init' });
+            } catch (err) {
+                setEngineStatus('error', 'Worker Desteklenmiyor');
+                appendTerminal(`[Worker Init Error]: ${err.message}`, 'stderr');
+            }
+        }
+
+        function setEngineStatus(state, label) {
+            statusDot.className = `status-dot ${state}`;
+            statusText.textContent = label;
+        }
+
+        function getTimeString() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            return `[${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}]`;
+        }
+
+        function appendTerminal(text, type = 'stdout') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+
+            const time = document.createElement('span');
+            time.className = 'log-time';
+            time.textContent = getTimeString();
+
+            const msg = document.createElement('span');
+            msg.className = 'log-text';
+            msg.textContent = text;
+
+            entry.appendChild(time);
+            entry.appendChild(msg);
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function appendStreamChunk(chunk) {
+            if (!currentChunkTarget) {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry log-stream';
+
+                const time = document.createElement('span');
+                time.className = 'log-time';
+                time.textContent = getTimeString();
+
+                const msg = document.createElement('span');
+                msg.className = 'log-text';
+                msg.textContent = chunk;
+
+                entry.appendChild(time);
+                entry.appendChild(msg);
+                terminal.appendChild(entry);
+                currentChunkTarget = msg;
+            } else {
+                currentChunkTarget.textContent += chunk;
+            }
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            terminal.innerHTML = '';
+            currentChunkTarget = null;
+        }
+
+        function copyConsoleOutput() {
+            const text = terminal.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                appendTerminal('[Kopyalandı] Konsol çıktısı panoya kopyalandı.', 'info');
+            }).catch(() => {
+                appendTerminal('[Hata] Pano erişimi reddedildi.', 'stderr');
+            });
+        }
+
+        // Editor Line Number Synchronization
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            const count = lines.length;
+            lineNumbers.innerHTML = Array.from({ length: count }, (_, i) => i + 1).join('<br>');
+            lineCountLabel.textContent = `${count} satır`;
+        }
+
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
+        });
+
+        // Tab Key Indentation
+        editor.addEventListener('keydown', function (e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+                updateLineNumbers();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+        });
+
+        // Example Management
+        function loadSelectedExample() {
+            const key = exampleSelector.value;
+            if (EXAMPLES[key]) {
+                editor.value = EXAMPLES[key];
+                updateLineNumbers();
+            }
+        }
+
+        function resetEditor() {
+            loadSelectedExample();
+            clearTerminal();
+            appendTerminal('[Sıfırlandı] Editör ve çalışma zamanı başlangıç durumuna getirildi.', 'info');
+            if (worker) {
+                worker.postMessage({ type: 'reset' });
+            }
+        }
+
+        // Run Code Action
+        function runCode() {
+            if (isRunning) return;
+            const code = editor.value;
+            const exampleId = exampleSelector.value;
+
+            isRunning = true;
+            runBtn.disabled = true;
+            runBtn.style.opacity = '0.7';
+            setEngineStatus('running', 'Yürütülüyor...');
+
+            appendTerminal(`\u25b6 [Çalıştırılıyor] ${exampleSelector.options[exampleSelector.selectedIndex].text}...`, 'info');
+
+            if (!worker) {
+                initWorker();
+            }
+
+            worker.postMessage({
+                type: 'run',
+                code: code,
+                exampleId: exampleId
+            });
+        }
+
+        // Tour of Synapse Logic
+        let tourMode = false;
+        let currentTourIndex = 0;
+        let TOUR_DATA = null;
+
+        async function initTourData() {
+            try {
+                const res = await fetch('tour.json');
+                if (res.ok) {
+                    TOUR_DATA = await res.json();
+                }
+            } catch (e) {
+                console.warn('Could not fetch tour.json:', e);
+            }
+        }
+
+        function toggleTourMode() {
+            tourMode = !tourMode;
+            const banner = document.getElementById('tourBanner');
+            const tourBtn = document.getElementById('tourBtn');
+            if (tourMode) {
+                banner.style.display = 'flex';
+                tourBtn.style.background = '#2563eb';
+                tourBtn.style.color = '#ffffff';
+                loadTourStep(0);
+            } else {
+                banner.style.display = 'none';
+                tourBtn.style.background = 'rgba(59, 130, 246, 0.15)';
+                tourBtn.style.color = '#60a5fa';
+                loadSelectedExample();
+            }
+        }
+
+        function loadTourStep(index) {
+            if (!TOUR_DATA || !TOUR_DATA.steps) return;
+            if (index < 0) index = 0;
+            if (index >= TOUR_DATA.steps.length) index = TOUR_DATA.steps.length - 1;
+            currentTourIndex = index;
+            const step = TOUR_DATA.steps[index];
+            document.getElementById('tourBadge').innerText = `Adım ${step.id} / ${TOUR_DATA.steps.length}`;
+            document.getElementById('tourTitle').innerText = step.title;
+            document.getElementById('tourDesc').innerText = step.description;
+            editor.value = step.code;
+            updateLineNumbers();
+            appendTerminal(`\n\u2728 [Tour of Synapse] ${step.title}\n${step.description}\n`, 'info');
+        }
+
+        function nextTourStep() {
+            loadTourStep(currentTourIndex + 1);
+        }
+
+        function prevTourStep() {
+            loadTourStep(currentTourIndex - 1);
+        }
+
+        // Initial Boot
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSelectedExample();
+            initWorker();
+            initTourData();
+        });
+    </script>
+</body>
+</html>

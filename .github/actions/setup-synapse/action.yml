@@ -1,0 +1,83 @@
+name: 'Setup Synapse AI'
+description: 'Install Synapse AI programming language toolchain and native compiler on GitHub Actions runners'
+author: 'Synapse Team'
+
+inputs:
+  synapse-version:
+    description: 'Version of Synapse to install (e.g. "latest", "1.0.0")'
+    required: false
+    default: 'latest'
+  profile:
+    description: 'Compilation profile: "standalone" (pure C99 AOT) or "hybrid" (with Python interop)'
+    required: false
+    default: 'standalone'
+  cache:
+    description: 'Whether to cache the Synapse toolchain and .syn_cache across CI runs'
+    required: false
+    default: 'true'
+
+outputs:
+  synapse-version:
+    description: 'The installed version of Synapse'
+    value: ${{ steps.install-synapse.outputs.version }}
+  synapse-path:
+    description: 'Directory path where Synapse binary is installed'
+    value: ${{ steps.install-synapse.outputs.synapse-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Cache Synapse AST Cache
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.syn_cache
+          .syn_cache
+        key: synapse-ast-${{ runner.os }}-${{ hashFiles('**/*.syn') }}
+        restore-keys: |
+          synapse-ast-${{ runner.os }}-
+
+    - name: Install Synapse (Linux / macOS)
+      if: runner.os != 'Windows'
+      id: install-synapse-posix
+      shell: bash
+      run: |
+        echo "Installing Synapse toolchain for POSIX..."
+        mkdir -p "$HOME/.synapse/bin"
+        python -m pip install --upgrade pip
+        python -m pip install -e .
+        echo "$HOME/.synapse/bin" >> $GITHUB_PATH
+        SYN_VER=$(python -c "import synapse; print(synapse.__version__)")
+        echo "version=$SYN_VER" >> $GITHUB_OUTPUT
+        echo "synapse-path=$HOME/.synapse/bin" >> $GITHUB_OUTPUT
+        echo "Synapse v$SYN_VER installed successfully on ${{ runner.os }}."
+
+    - name: Install Synapse (Windows)
+      if: runner.os == 'Windows'
+      id: install-synapse-windows
+      shell: pwsh
+      run: |
+        Write-Host "Installing Synapse toolchain for Windows x64..."
+        $installDir = "$env:LOCALAPPDATA\synapse"
+        New-Item -ItemType Directory -Force -Path "$installDir\bin" | Out-Null
+        python -m pip install --upgrade pip
+        python -m pip install -e .
+        "$installDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $synVer = python -c "import synapse; print(synapse.__version__)"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$synVer"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "synapse-path=$installDir\bin"
+        Write-Host "Synapse v$synVer installed successfully on Windows."
+
+    - name: Verify Installation
+      id: install-synapse
+      shell: bash
+      run: |
+        synapse --version || python -m synapse.cli --version
+        echo "Synapse verification completed."

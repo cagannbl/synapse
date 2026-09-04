@@ -1,0 +1,116 @@
+# =============================================================================
+# Synapse Industrial Showcase 03: Edge WebAssembly Neural Inference
+# (AOT WebAssembly --target=wasm, Single-Threaded Task Queue & Client Quantization)
+# =============================================================================
+
+print("==================================================================")
+print("Synapse Edge WebAssembly (WASM) Client-Side Inference Engine")
+print("==================================================================")
+
+# -----------------------------------------------------------------------------
+# 1. Exportable Edge WebAssembly Functions (C-ABI Compatible)
+# -----------------------------------------------------------------------------
+# These functions are extracted automatically by WasmCompiler and exported
+# to JavaScript/WASM with Emscripten ccall/cwrap wrappers.
+
+fn relu_activation(x: f64) -> f64:
+    if x > 0.0:
+        return x
+    return 0.0
+
+fn quantize_feature(val: f64, scale: f64) -> int:
+    let scaled = val / scale
+    if scaled > 127.0:
+        return 127
+    if scaled < -128.0:
+        return -128
+    return int(scaled)
+
+fn dequantize_feature(qval: int, scale: f64) -> f64:
+    return float(qval) * scale
+
+fn compute_linear_neuron(input_val: f64, weight: f64, bias: f64) -> f64:
+    let raw_sum = input_val * weight + bias
+    return relu_activation(raw_sum)
+
+fn predict_anomaly(score: f64, threshold: f64) -> int:
+    if score >= threshold:
+        return 1
+    return 0
+
+# -----------------------------------------------------------------------------
+# 2. Client-Side Matrix Operations & Edge Neural Activation
+# -----------------------------------------------------------------------------
+print("\n[Stage 1] Client-Side Tensor Matrix Multiplication & Activation...")
+
+# Input feature matrix (Batch: 2 samples, 2 features)
+let X = tensor([[1.2, -0.5], [0.8, 1.4]])
+
+# Weight matrix (2 features, 2 output units)
+let W = tensor([[0.75, -0.25], [0.50, 0.90]])
+
+# Edge forward GEMM pass (2x2 @ 2x2 -> 2x2)
+let Y = X @ W
+print("Input Tensor X (2x2):", X)
+print("Weight Tensor W (2x2):", W)
+print("Forward Output Y = X @ W:", Y)
+
+# -----------------------------------------------------------------------------
+# 3. Client-Side INT8 Quantization Benchmark on Edge
+# -----------------------------------------------------------------------------
+print("\n[Stage 2] Evaluating Edge INT8 Quantization Accuracy...")
+
+let sample_val = 2.45
+let scale = 0.025
+let q_code = quantize_feature(sample_val, scale)
+let recovered_val = dequantize_feature(q_code, scale)
+
+print("Float32 Feature Value :", sample_val)
+print("INT8 Quantized Code   :", q_code)
+print("Dequantized Feature   :", recovered_val)
+
+# Compute edge neuron activation
+let neuron_output = compute_linear_neuron(sample_val, 0.85, -0.40)
+let anomaly_detected = predict_anomaly(neuron_output, 1.0)
+
+print("Linear + ReLU Activation:", neuron_output)
+print("Anomaly Decision Flag   :", anomaly_detected)
+
+# -----------------------------------------------------------------------------
+# 4. Single-Threaded Browser Event Queue (FIFO Task Scheduling)
+# -----------------------------------------------------------------------------
+print("\n[Stage 3] Single-Threaded Browser Request Queue Simulation...")
+
+# In a browser WebAssembly / Web Worker environment, execution runs in a
+# single-threaded non-blocking event loop.
+let task_queue = [
+    {"task_id": "REQ-101", "val": 0.35, "w": 0.80, "b": 0.10},
+    {"task_id": "REQ-102", "val": 1.75, "w": 1.10, "b": -0.20},
+    {"task_id": "REQ-103", "val": 2.80, "w": 0.95, "b": 0.05},
+    {"task_id": "REQ-104", "val": -0.40, "w": 0.50, "b": 0.20}
+]
+
+let completed_tasks = []
+let idx = 0
+while idx < len(task_queue):
+    let t = task_queue[idx]
+    let out = compute_linear_neuron(t["val"], t["w"], t["b"])
+    let flag = predict_anomaly(out, 1.20)
+    completed_tasks.append({
+        "task_id": t["task_id"],
+        "activation": out,
+        "is_anomaly": flag
+    })
+    idx += 1
+
+print("Single-Threaded Queue Processed:", len(completed_tasks), "edge inference requests:")
+let p = 0
+while p < len(completed_tasks):
+    let item = completed_tasks[p]
+    print("  * [" + item["task_id"] + "] Output: " + str(item["activation"]) + " -> Alert: " + str(item["is_anomaly"]))
+    p += 1
+
+print("\n==================================================================")
+print("Edge WebAssembly Inference Module Verified Successfully!")
+print("Compile to WASM with: synapse build main.syn --target=wasm --html")
+print("==================================================================")

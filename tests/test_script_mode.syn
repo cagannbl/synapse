@@ -1,0 +1,5 @@
+# File-level assertions without fn test_*
+let x = 100
+let y = 200
+assert_eq(x + y, 300)
+assert_true(y > x)

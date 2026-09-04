@@ -1,0 +1,59 @@
+name: Release Synapse VS Code Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build VSIX Package (POSIX Zip & Zero npm dependency)
+        run: |
+          python editors/vscode/build_vsix.py
+
+      - name: Upload VSIX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: synapse-vsix
+          path: synapse-lang-*.vsix
+
+      - name: Set up Node.js for publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Publish to Open VSX Registry
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -n "$OVSX_PAT" ]; then
+            npx ovsx publish synapse-lang-*.vsix -p "$OVSX_PAT"
+          else
+            echo "OVSX_PAT secret not provided, skipping Open VSX publish."
+          fi
+
+      - name: Publish to Visual Studio Code Marketplace
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -n "$VSCE_PAT" ]; then
+            npx @vscode/vsce publish --packagePath synapse-lang-*.vsix -p "$VSCE_PAT"
+          else
+            echo "VSCE_PAT secret not provided, skipping VS Code Marketplace publish."
+          fi

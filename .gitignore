@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.class
+*.egg-info/
+dist/
+build/
+
+# C / C++ derleme çıktıları & ikililer
+*.obj
+*.o
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+examples/*.c
+!examples/edge_wasm_inference/main.c
+
+# Synapse derleyici ve test önbellekleri
+.syn_cache/
+.synapse_env/
+.pytest_cache/
+*.log
+*.arrow
+market_telemetry.arrow
+*.safetensors
+enterprise_rag_weights.safetensors
+model_config_checkpoint.json
+syn_modules/
+
+# VS Code uzantı paketleri
+*.vsix
+editors/vscode/*.vsix
+vscode-synapse/*.vsix
+
+# Ortam değişkenleri ve gizli dosyalar
+.env
+.env.*
+*.pem
+*.key
+
+# İşletim sistemi kalıntıları
+.DS_Store
+Thumbs.db
+

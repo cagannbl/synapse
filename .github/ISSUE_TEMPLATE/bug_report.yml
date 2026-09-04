@@ -1,0 +1,110 @@
+name: "🐛 Bug Report"
+description: "File an actionable bug report to help improve Synapse AI"
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug in Synapse AI! Please ensure you test with the latest version from `main` before submitting.
+
+  - type: input
+    id: version
+    attributes:
+      label: "Synapse Version"
+      description: "Run `synapse --version` or provide the git commit hash."
+      placeholder: "e.g., v3.0.0 (commit abc1234)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      description: "Which operating system are you running?"
+      options:
+        - Linux (Ubuntu/Debian)
+        - Linux (Arch/Fedora/Alpine)
+        - macOS (Apple Silicon M-Series)
+        - macOS (Intel)
+        - Windows 11 / 10
+        - WebAssembly (Browser / Node)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: compiler
+    attributes:
+      label: "C Compiler (if using AOT/standalone)"
+      description: "Which C compiler is detected by Synapse on your machine?"
+      options:
+        - "None (using VM / REPL only)"
+        - "Zig (`zig cc`)"
+        - "GCC (`gcc`)"
+        - "Clang (`clang`)"
+        - "MSVC (`cl.exe`)"
+        - "TinyCC (`tcc`)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Minimal Reproducible Example (.syn)"
+      description: "Provide the shortest `.syn` code snippet that triggers the bug."
+      placeholder: |
+        let A = tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=true)
+        let B = tensor([[5.0], [6.0]])
+        let C = A @ B
+        C.backward()
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: "CLI Command Executed"
+      description: "The exact command you ran in your terminal."
+      placeholder: "synapse run script.syn OR synapse emit-c script.syn --profile=standalone"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Actual Output / Traceback"
+      description: "Paste the full terminal output, traceback, or compiler error."
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior"
+      description: "A clear and concise description of what you expected to happen."
+      placeholder: "Expected tensor matmul backward to calculate grad shape [2, 1] without error."
+    validations:
+      required: true
+
+  - type: textarea
+    id: c99_code
+    attributes:
+      label: "Emitted C99 Snippet (if applicable)"
+      description: "If this is an AOT / C99 transpilation bug, include the relevant lines from the emitted C code."
+      render: c
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Contributor Checklist"
+      options:
+        - label: "I have searched the existing issues and confirmed this is not a duplicate."
+          required: true
+        - label: "I have verified this issue using a minimal reproducible example."
+          required: true
+        - label: "I have read the CONTRIBUTING.md guidelines."
+          required: true

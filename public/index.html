@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synapse Store — AI-Native E-Commerce Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#121215',
+              850: '#18181b',
+              800: '#27272a',
+              700: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    .subtle-border {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-zinc-950 flex flex-col selection:bg-zinc-800 selection:text-white">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-white shadow-inner group-hover:border-zinc-600 transition-colors">
+            <span class="text-sm font-mono tracking-tighter text-zinc-200">S⚡</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-zinc-100 tracking-tight text-base">SYNAPSE</span>
+              <span class="font-light text-zinc-400 text-sm">STORE</span>
+              <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">v2.5</span>
+            </div>
+            <p class="text-[11px] text-zinc-500 font-mono tracking-tight -mt-0.5">AI-Native E-Commerce Backend & Otonom Ajan</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Smart Semantic Search Bar -->
+      <div class="flex-1 max-w-xl mx-2 relative">
+        <div class="relative flex items-center">
+          <svg class="absolute left-3.5 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input 
+            type="text" 
+            id="searchInput"
+            placeholder="Doğal dille akıllı ara... (örn: 'gece göz yormayan lamba', 'sessiz klavye')"
+            class="w-full bg-zinc-900/90 text-sm text-zinc-100 placeholder-zinc-500 pl-10 pr-24 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all font-sans"
+            onkeydown="if(event.key==='Enter') executeSearch()"
+          />
+          <div class="absolute right-2 flex items-center gap-1">
+            <span id="searchBadge" class="hidden text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded">RAG</span>
+            <button onclick="executeSearch()" class="px-2.5 py-1 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
+              Ara
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons: AI Advisor & Cart -->
+      <div class="flex items-center gap-2.5">
+        <button onclick="openAdvisorModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-850 text-xs font-medium text-zinc-300 hover:text-white transition-all">
+          <svg class="w-3.5 h-3.5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
+          </svg>
+          <span>AI Danışman</span>
+        </button>
+
+        <button onclick="toggleCartDrawer()" class="relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold transition-all">
+          <svg class="w-4 h-4 text-zinc-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+          <span>Sepetim</span>
+          <span id="cartCountBadge" class="bg-zinc-900 text-zinc-100 text-[11px] font-mono px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+
+    <!-- HERO / BANNER -->
+    <div class="relative rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-950 border border-zinc-800 p-6 sm:p-8 overflow-hidden">
+      <div class="max-w-3xl flex flex-col gap-3 relative z-10">
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-800/80 border border-zinc-700/60 w-fit text-[11px] font-mono text-zinc-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          Python Yok • Harici Kütüphane Yok • %100 Yerel Synapse v2.5 Backend
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          Yazılımcılar ve Odaklanma Meraklıları İçin Akıllı Donanımlar
+        </h1>
+        <p class="text-sm text-zinc-400 leading-relaxed max-w-2xl">
+          Klasik SQL kelime araması yerine, Synapse'in dahili vektör belleği (<code class="text-zinc-300 font-mono text-xs">store_memory.recall</code>) sayesinde ürünleri hislerinize ve ihtiyaçlarınıza göre bulabilirsiniz.
+        </p>
+
+        <!-- Quick Search Pills -->
+        <div class="flex flex-wrap items-center gap-2 pt-2">
+          <span class="text-xs text-zinc-500 font-medium">Hızlı Semantik Deneme:</span>
+          <button onclick="quickSearch('sessiz kod yazmak için')" class="text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded-lg transition-colors">
+            💬 "sessiz kod yazmak için"
+          </button>
+          <button onclick="quickSearch('gece göz yormayan aydınlatma')" class="text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded-lg transition-colors">
+            💬 "gece göz yormayan aydınlatma"
+          </button>
+          <button onclick="quickSearch('gürültülü ofiste odaklanma')" class="text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded-lg transition-colors">
+            💬 "gürültülü ofiste odaklanma"
+          </button>
+          <button onclick="quickSearch('kablosuz masa düzeni')" class="text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded-lg transition-colors">
+            💬 "kablosuz masa düzeni"
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY FILTER & METRICS BAR -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+      
+      <!-- Category Tabs -->
+      <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0" id="categoryTabs">
+        <button onclick="filterCategory('Tümü')" class="cat-btn active px-3 py-1.5 rounded-xl text-xs font-medium bg-white text-zinc-950 transition-colors">
+          Tümü (6)
+        </button>
+        <button onclick="filterCategory('Klavye')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Klavye
+        </button>
+        <button onclick="filterCategory('Ses')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Ses
+        </button>
+        <button onclick="filterCategory('Görüntü')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Görüntü
+        </button>
+        <button onclick="filterCategory('Mobilya')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Mobilya
+        </button>
+        <button onclick="filterCategory('Aydınlatma')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Aydınlatma
+        </button>
+        <button onclick="filterCategory('Aksesuar')" class="cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors">
+          Aksesuar
+        </button>
+      </div>
+
+      <!-- Backend Info Label -->
+      <div class="flex items-center gap-3 text-xs text-zinc-500 font-mono">
+        <span id="resultsCount">6 ürün listeleniyor</span>
+        <span>•</span>
+        <span class="flex items-center gap-1 text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synapse API 200 OK
+        </span>
+      </div>
+
+    </div>
+
+    <!-- PRODUCT GRID -->
+    <div id="productGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Dynamically filled by JavaScript -->
+    </div>
+
+  </main>
+
+  <!-- AI SHOPPING ADVISOR MODAL / DRAWER -->
+  <div id="advisorModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in duration-200">
+      
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-emerald-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-white">Synapse Akıllı Alışveriş Danışmanı</h3>
+            <p class="text-[11px] font-mono text-zinc-400">ShoppingAdvisor |> Synapse VM Runtime</p>
+          </div>
+        </div>
+        <button onclick="closeAdvisorModal()" class="text-zinc-500 hover:text-white p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Chat Output Box -->
+      <div id="advisorChatBox" class="h-64 overflow-y-auto bg-zinc-950/60 rounded-xl p-4 border border-zinc-800/60 flex flex-col gap-3 text-xs leading-relaxed text-zinc-300">
+        <div class="bg-zinc-900 border border-zinc-800 p-3 rounded-xl max-w-[90%] self-start">
+          <span class="text-emerald-400 font-medium block mb-1">Synapse Asistan:</span>
+          Merhaba! Ben Synapse Store danışmanıyım. Bütçenizi, çalışma alanınızı veya neye ihtiyacınız olduğunu yazın, mağazadaki en uygun ürün kombinasyonunu sizin için önereyim.
+        </div>
+      </div>
+
+      <!-- Prompt Input -->
+      <div class="flex gap-2">
+        <input 
+          type="text" 
+          id="advisorInput" 
+          placeholder="Örn: Bütçem 10.000 TL, geceleri sessiz çalışmak için ne almalıyım?"
+          class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+          onkeydown="if(event.key==='Enter') sendAdvisorPrompt()"
+        />
+        <button onclick="sendAdvisorPrompt()" id="advisorSendBtn" class="px-4 py-2 bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold rounded-xl transition-colors">
+          Sor
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CART SLIDE-OVER DRAWER -->
+  <div id="cartDrawer" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden">
+    <div class="absolute right-0 top-0 bottom-0 w-full max-w-md bg-zinc-900 border-l border-zinc-800 p-6 flex flex-col justify-between shadow-2xl">
+      
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+          <h2 class="text-base font-semibold text-white">Alışveriş Sepeti</h2>
+        </div>
+        <button onclick="toggleCartDrawer()" class="text-zinc-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Drawer Items List -->
+      <div id="cartItemsList" class="flex-1 overflow-y-auto py-4 flex flex-col gap-3">
+        <!-- Dynamically filled -->
+      </div>
+
+      <!-- Drawer Footer & Checkout -->
+      <div class="border-t border-zinc-800 pt-4 flex flex-col gap-3">
+        <!-- Coupon input -->
+        <div class="flex gap-2">
+          <input type="text" id="couponInput" placeholder="Kupon Kodu (Örn: SYNAPSE10)" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 uppercase font-mono">
+          <button onclick="applyCoupon()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded-xl">Uygula</button>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-zinc-400">
+          <span>Kargo</span>
+          <span class="text-emerald-400 font-medium">Ücretsiz</span>
+        </div>
+
+        <div class="flex items-center justify-between text-sm font-semibold text-white border-t border-zinc-800/60 pt-2">
+          <span>Toplam Tutar</span>
+          <span id="cartTotalDisplay">0 ₺</span>
+        </div>
+
+        <button onclick="handleCheckout()" id="checkoutBtn" class="w-full py-3 bg-white text-zinc-950 hover:bg-zinc-200 font-semibold rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+          <span>Siparişi Tamamla (Synapse Checkout)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ORDER SUCCESS NOTIFICATION MODAL -->
+  <div id="orderSuccessModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 max-w-sm w-full rounded-2xl p-6 text-center flex flex-col items-center gap-4 shadow-2xl">
+      <div class="w-12 h-12 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-white">Sipariş Başarıyla Alındı!</h3>
+        <p class="text-xs text-zinc-400 mt-1">Siparişiniz Synapse VM web çekirdeğinde işlendi ve onaylandı.</p>
+        <div class="mt-3 bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs font-mono text-zinc-300">
+          Sipariş Kodu: <span id="successOrderId" class="text-emerald-400 font-bold">SYN-2026-8924</span>
+        </div>
+      </div>
+      <button onclick="closeSuccessModal()" class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-white rounded-xl transition-colors">
+        Alışverişe Devam Et
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let products = [];
+    let cart = [];
+    let activeCategory = 'Tümü';
+    let discountRate = 0.0;
+
+    // SVG Icons by Category / Key
+    const icons = {
+      keyboard: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M3 14h18m-9-4v8m-5-8v8m10-8v8M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>`,
+      headphones: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 18v-6a9 9 0 0118 0v6M3 18a3 3 0 003 3h1a1 1 0 001-1v-4a1 1 0 00-1-1H4a1 1 0 00-1 1zm18 0a3 3 0 01-3 3h-1a1 1 0 01-1-1v-4a1 1 0 011-1h3a1 1 0 011 1z"/></svg>`,
+      monitor: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`,
+      table: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 6v12M20 6v12M8 6v12m8-12v12"/></svg>`,
+      lamp: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>`,
+      charging: `<svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
+    };
+
+    // Load initial products from Synapse API
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        products = data.products || [];
+        renderProducts(products);
+      } catch (err) {
+        console.error("Ürün yükleme hatası:", err);
+      }
+    }
+
+    // Render Products to Grid
+    function renderProducts(items) {
+      const grid = document.getElementById('productGrid');
+      document.getElementById('resultsCount').textContent = `${items.length} ürün listeleniyor`;
+
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-16 text-center flex flex-col items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400">Aradığınız kriterlere uygun ürün bulunamadı.</p>
+            <button onclick="resetSearch()" class="text-xs text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg">Tüm Ürünleri Göster</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = items.map(p => {
+        // Eğer semantik arama skoru varsa (recall sonucundan)
+        const scoreBadge = p.score ? `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950/70 border border-emerald-800/80 text-emerald-400">
+            🎯 %${Math.round(p.score * 100)} Semantik Uyum
+          </span>
+        ` : '';
+
+        // Ürün verisi (metadata'dan veya direkt p'den)
+        const item = p.metadata ? p.metadata : p;
+        const iconSvg = icons[item.icon] || icons.keyboard;
+
+        return `
+          <div class="group relative rounded-2xl bg-zinc-900/50 border border-zinc-800/90 p-5 flex flex-col justify-between hover:border-zinc-700/90 hover:bg-zinc-900/80 transition-all duration-200">
+            
+            <div>
+              <!-- Card Top: Badge & Icon -->
+              <div class="flex items-start justify-between gap-2 mb-4">
+                <div class="w-12 h-12 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                  ${iconSvg}
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 bg-zinc-800/80 border border-zinc-700/50 px-2 py-0.5 rounded-md">
+                    ${item.badge || item.category}
+                  </span>
+                  ${scoreBadge}
+                </div>
+              </div>
+
+              <!-- Product Category & Title -->
+              <span class="text-[11px] font-mono text-zinc-400">${item.category}</span>
+              <h3 class="text-base font-semibold text-white tracking-tight mt-0.5 group-hover:text-zinc-100">
+                ${item.name}
+              </h3>
+
+              <!-- Description -->
+              <p class="text-xs text-zinc-400 mt-2 line-clamp-3 leading-relaxed">
+                ${item.description}
+              </p>
+            </div>
+
+            <!-- Card Bottom: Rating, Price, Add to Cart -->
+            <div class="border-t border-zinc-800/70 pt-4 mt-5 flex items-center justify-between">
+              <div>
+                <div class="flex items-center gap-1 text-[11px] text-zinc-400">
+                  <span class="text-amber-400">★</span>
+                  <span class="font-medium text-zinc-300">${item.rating || 4.9}</span>
+                  <span class="text-zinc-500">(${item.reviews || 80})</span>
+                </div>
+                <div class="text-base font-bold text-white font-mono mt-0.5">
+                  ${item.price.toLocaleString('tr-TR')} ₺
+                </div>
+              </div>
+
+              <button onclick="addToCart(${item.id})" class="px-3.5 py-1.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                <span>Sepete Ekle</span>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Quick Search Trigger
+    function quickSearch(query) {
+      document.getElementById('searchInput').value = query;
+      executeSearch();
+    }
+
+    // Execute Semantic Search against Synapse Backend
+    async function executeSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      const badge = document.getElementById('searchBadge');
+
+      if (!q) {
+        badge.classList.add('hidden');
+        renderProducts(products);
+        return;
+      }
+
+      badge.classList.remove('hidden');
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        
+        // Eğer semantik recall sonuçları döndüyse
+        if (data.results && data.results.length > 0 && data.results[0].metadata) {
+          const mapped = data.results.map(r => ({
+            ...r.metadata,
+            score: r.score
+          }));
+          renderProducts(mapped);
+        } else {
+          renderProducts(data.results || []);
+        }
+      } catch (err) {
+        console.error("Arama hatası:", err);
+      }
+    }
+
+    function resetSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('searchBadge').classList.add('hidden');
+      renderProducts(products);
+    }
+
+    // Category Filter
+    function filterCategory(cat) {
+      activeCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.textContent.trim().startsWith(cat)) {
+          btn.className = "cat-btn active px-3 py-1.5 rounded-xl text-xs font-medium bg-white text-zinc-950 transition-colors";
+        } else {
+          btn.className = "cat-btn px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors";
+        }
+      });
+
+      if (cat === 'Tümü') {
+        renderProducts(products);
+      } else {
+        const filtered = products.filter(p => p.category === cat);
+        renderProducts(filtered);
+      }
+    }
+
+    // Cart Management
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      const existing = cart.find(item => item.id === productId);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ ...product, qty: 1 });
+      }
+
+      updateCartUI();
+      // Animate badge
+      const badge = document.getElementById('cartCountBadge');
+      badge.classList.add('scale-125');
+      setTimeout(() => badge.classList.remove('scale-125'), 150);
+    }
+
+    function changeQty(productId, delta) {
+      const item = cart.find(i => i.id === productId);
+      if (!item) return;
+      item.qty += delta;
+      if (item.qty <= 0) {
+        cart = cart.filter(i => i.id !== productId);
+      }
+      updateCartUI();
+    }
+
+    function updateCartUI() {
+      const totalCount = cart.reduce((acc, i) => acc + i.qty, 0);
+      document.getElementById('cartCountBadge').textContent = totalCount;
+
+      const list = document.getElementById('cartItemsList');
+      if (cart.length === 0) {
+        list.innerHTML = `
+          <div class="py-12 text-center text-zinc-500 text-xs">
+            Sepetinizde henüz ürün bulunmuyor.
+          </div>
+        `;
+        document.getElementById('cartTotalDisplay').textContent = "0 ₺";
+        return;
+      }
+
+      let subtotal = 0;
+      list.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.qty;
+        subtotal += itemTotal;
+        return `
+          <div class="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold text-white">${item.name}</div>
+              <div class="text-[11px] text-zinc-400 font-mono">${item.price.toLocaleString('tr-TR')} ₺</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="changeQty(${item.id}, -1)" class="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold">-</button>
+              <span class="text-xs font-mono text-zinc-100 w-4 text-center">${item.qty}</span>
+              <button onclick="changeQty(${item.id}, 1)" class="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (discountRate > 0) {
+        subtotal = subtotal * (1 - discountRate);
+      }
+      document.getElementById('cartTotalDisplay').textContent = `${Math.round(subtotal).toLocaleString('tr-TR')} ₺`;
+    }
+
+    function toggleCartDrawer() {
+      const drawer = document.getElementById('cartDrawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function applyCoupon() {
+      const code = document.getElementById('couponInput').value.trim().toUpperCase();
+      if (code === 'SYNAPSE10') {
+        discountRate = 0.10;
+        alert("Harika! %10 indirim uygulandı.");
+        updateCartUI();
+      } else {
+        alert("Geçersiz kupon kodu. Deneyebileceğiniz: SYNAPSE10");
+      }
+    }
+
+    // Checkout
+    async function handleCheckout() {
+      if (cart.length === 0) {
+        alert("Sepetiniz boş!");
+        return;
+      }
+
+      const btn = document.getElementById('checkoutBtn');
+      btn.innerHTML = `<span>İşleniyor...</span>`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart,
+            coupon: discountRate > 0 ? "SYNAPSE10" : ""
+          })
+        });
+        const data = await res.json();
+        
+        toggleCartDrawer();
+        cart = [];
+        updateCartUI();
+
+        document.getElementById('successOrderId').textContent = data.order_id || 'SYN-2026-8924';
+        document.getElementById('orderSuccessModal').classList.remove('hidden');
+      } catch (err) {
+        alert("Sipariş işlenirken hata oluştu: " + err);
+      } finally {
+        btn.innerHTML = `<span>Siparişi Tamamla (Synapse Checkout)</span>`;
+        btn.disabled = false;
+      }
+    }
+
+    function closeSuccessModal() {
+      document.getElementById('orderSuccessModal').classList.add('hidden');
+    }
+
+    // Advisor Modal
+    function openAdvisorModal() {
+      document.getElementById('advisorModal').classList.remove('hidden');
+    }
+
+    function closeAdvisorModal() {
+      document.getElementById('advisorModal').classList.add('hidden');
+    }
+
+    async function sendAdvisorPrompt() {
+      const input = document.getElementById('advisorInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chatBox = document.getElementById('advisorChatBox');
+      const btn = document.getElementById('advisorSendBtn');
+
+      // Add user message
+      chatBox.innerHTML += `
+        <div class="bg-zinc-800 text-zinc-100 p-3 rounded-xl max-w-[85%] self-end">
+          ${text}
+        </div>
+      `;
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      btn.disabled = true;
+      btn.textContent = 'Düşünüyor...';
+
+      try {
+        const res = await fetch('/api/advisor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text })
+        });
+        const data = await res.json();
+        
+        chatBox.innerHTML += `
+          <div class="bg-zinc-900 border border-zinc-800 p-3 rounded-xl max-w-[90%] self-start">
+            <span class="text-emerald-400 font-medium block mb-1">Synapse Asistan:</span>
+            ${data.advice || "Öneriler hazırlandı."}
+          </div>
+        `;
+      } catch (err) {
+        chatBox.innerHTML += `
+          <div class="bg-red-950/60 border border-red-800 text-red-300 p-3 rounded-xl max-w-[90%] self-start">
+            Hata oluştu: ${err}
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sor';
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    // Startup
+    loadProducts();
+  </script>
+</body>
+</html>
