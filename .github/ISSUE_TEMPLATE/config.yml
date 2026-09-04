@@ -1,0 +1,8 @@
+﻿blank_issues_enabled: false
+contact_links:
+  - name: 💬 Synapse Community Discussions
+    url: https://github.com/cagannbl/synapse/discussions
+    about: Ask questions, share projects, and discuss architectural ideas with the community.
+  - name: 📖 Official Documentation
+    url: https://github.com/cagannbl/synapse#readme
+    about: Browse user guides, language tours, and CLI reference.
