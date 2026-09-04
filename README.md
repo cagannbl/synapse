@@ -401,6 +401,6 @@ Synapse, [MIT Lisansı](LICENSE) kapsamında açık kaynaklıdır. Dünyanın he
 
 <div align="center">
 
-**[Synapse GitHub Deposunu Yıldızlayın ⭐](https://github.com/synapse-lang/synapse)** • Modern AI sistem mühendisliğine siz de katılın.
+**[Synapse GitHub Deposunu Yıldızlayın ⭐](https://github.com/cagannbl/synapse)** • Modern AI sistem mühendisliğine siz de katılın.
 
 </div>
