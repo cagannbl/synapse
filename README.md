@@ -12,6 +12,10 @@
 ### Synapse: The Zero-Dependency AI-Native Systems Language That Transpiles to a 0.21MB Standalone C99 Binary
 
 <p align="center">
+  <b>English</b> • <a href="README.tr.md"><b>Türkçe</b></a>
+</p>
+
+<p align="center">
   <a href="tests/"><img src="https://img.shields.io/badge/Tests-943%2F943%20Passing-10b981?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Tests 943/943 Passing" /></a>
   <a href="examples/edge_nanogpt/"><img src="https://img.shields.io/badge/Binary%20Size-0.21%20MB-18181b?style=for-the-badge&logo=speedtest&logoColor=white" alt="Binary Size 0.21 MB" /></a>
   <a href="docs/architecture/positioning.md"><img src="https://img.shields.io/badge/Memory-Zero%20GC%20%7C%20Deterministic%20Arena-27272a?style=for-the-badge&logo=ram&logoColor=white" alt="Deterministic Arena" /></a>
@@ -20,8 +24,8 @@
 </p>
 
 <p align="center">
-  <b>Python benzeri zarafet, C benzeri çıplak metal hız, derleme anında doğrulanan tensör boyutları ve sıfır harici bağımlılık.</b><br>
-  Python'ın 2.5 GB'lık konteynerlerini, GIL darboğazını ve gece yarısı patlayan matris boyutu hatalarını tek bir saf C99 ikilisiyle tarihe gömün.
+  <b>Python-like elegance, bare-metal C performance, compile-time verified tensor shapes, and zero external runtime dependencies.</b><br>
+  Replace 2.5 GB container bloat, GIL bottlenecks, and midnight shape-mismatch crashes with a single, standalone 0.21 MB C99 binary.
 </p>
 
 <p align="center">
@@ -35,25 +39,25 @@
 
 </div>
 
-## ⚡ 15 Saniyelik Hızlı Başlangıç (Quickstart)
+## ⚡ 15-Second Quickstart
 
-### 1. Tek Satırda Kurulum
+### 1. One-Line Installation
 
 ```powershell
-# Windows (PowerShell) - Otomatik PATH ve ortam yapılandırması
+# Windows (PowerShell) - Automatic PATH and environment configuration
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 ```
 
 ```bash
-# Linux / macOS (POSIX) - Sıfır yetki karmaşası, yerel ~/.synapse kurulumu
+# Linux / macOS (POSIX) - Zero sudo friction, isolated ~/.synapse install
 curl -fsSL https://get.synapse-lang.org/install.sh | bash
-# ya da repo içinden:
+# or from the repository clone:
 ./scripts/install.sh
 ```
 
-### 2. 3 Satırlık Synapse Kodu (`pipeline.syn`)
+### 2. A 3-Line Synapse Program (`pipeline.syn`)
 
-Pipeline (`|>`), yerleşik tensör matmul (`@`) ve deterministik arena kapsamı:
+Pipeline operator (`|>`), native tensor matmul (`@`), and deterministic arena scopes:
 
 ```python
 # pipeline.syn
@@ -61,43 +65,43 @@ let A = tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=true)
 let B = tensor([[0.5, -0.5], [1.5, 0.5]])
 
 let result = A @ B |> sum |> sqrt
-print("Ölçeklenmiş Tensör Çıktısı:", result)
+print("Scaled Tensor Output:", result)
 ```
 
 ```bash
 $ synapse run pipeline.syn
-Ölçeklenmiş Tensör Çıktısı: 3.872983
+Scaled Tensor Output: 3.872983
 ```
 
 ---
 
-## ⚖️ "Why Synapse?" — Büyük Çelişkileri Çözen 4'lü Karşılaştırma
+## ⚖️ "Why Synapse?" — Resolving the Big Trade-Offs
 
-Modern yapay zekâ mühendisliği, CPython'ın 30 yıllık teknik borcu ve mikroservis şişkinliğiyle boğuşuyor. PyTorch modelleri GPU'da mikrosaniyelerde koşarken, CPU tarafındaki yapıştırıcı kod (glue-code) GIL ve bellek kopyalama nedeniyle tıkanıyor. 
+Modern AI systems engineering suffers from CPython's 30-year legacy technical debt and container bloat. While PyTorch models execute on GPUs in microseconds, CPU glue-code stalls on GIL lock contention and serialization overhead.
 
-Synapse AI; **PyTorch + Python**, **Mojo**, **Rust** ve geleneksel sistem dillerinin ödünleşimlerini saf sistem mimarisiyle yeniden tanımlar:
+Synapse AI redefines the trade-offs between **PyTorch + Python**, **Mojo**, **Rust**, and traditional systems languages:
 
-| Mühendislik Boyutu | PyTorch + Python | Mojo (Modular) | Rust (Candle / Burn) | Synapse AI |
+| Dimension | PyTorch + Python | Mojo (Modular) | Rust (Candle / Burn) | Synapse AI |
 | :--- | :--- | :--- | :--- | :--- |
-| **Runtime Footprint** | **~2.5 GB** (CUDA, CPython, LibTorch devasa bağımlılıklar) | **~200 MB** (LLVM bağımlı çalışma zamanı) | **~10 - 25 MB** (Statik binary derleme) | **0.21 MB** (Sıfır bağımlılıklı saf ISO C99 binary) |
-| **Memory Model** | **GIL & Tracing GC** (Öngörülemeyen duraklamalar, bellek sızıntısı) | **ARC / Value Semantics** (Karmaşık sahiplik kuralları) | **Borrow Checker** (Yüksek öğrenme eğrisi, `unsafe` FFI) | **$O(1)$ Scoped Arena** (Sıfır GC, deterministik temizlik) |
-| **Shape Safety** | **Runtime Crash** (Üretimde patlayan `size mismatch` hataları) | **Partial Types** (Kısmi tip analizi, sınırlı sembolik motor) | **Complex Const Generics** (Aşırı şablon şişkinliği, zor hata mesajları) | **Compile-Time Symbolic Solver** (Matris uyuşmazlığını kod derlenirken çözer) |
-| **Dağıtım & Konteyner** | **Bloated Containers** (4GB - 12GB Docker, 15sn cold-start) | **LLVM Toolchain** (Özel toolchain ve platform kısıtları) | **Cargo Build** (Uzun derleme süreleri, target uyumluluğu) | **Standalone Single C99 Binary** (<5ms cold-start, scratch imajlar) |
-| **WebAssembly** | **Pyodide (>40 MB)** (Ağır, tarayıcıda pratik değil) | **Sınırlı** (Geliştirme aşamasında) | **wasm-bindgen / Emscripten** (Ekstra soyutlama katmanları) | **Native Microtask WASM** (Tarayıcıda anında <2MB zero-install inferans) |
+| **Runtime Footprint** | **~2.5 GB** (CUDA, CPython, LibTorch dependencies) | **~200 MB** (LLVM runtime dependencies) | **~10 - 25 MB** (Static binary compilation) | **0.21 MB** (Zero-dependency pure ISO C99 binary) |
+| **Memory Model** | **GIL & Tracing GC** (Unpredictable pauses, memory leaks) | **ARC / Value Semantics** (Complex ownership rules) | **Borrow Checker** (Steep learning curve, `unsafe` FFI) | **$O(1)$ Scoped Arena** (Zero GC, deterministic reclamation) |
+| **Shape Safety** | **Runtime Crash** (`size mismatch` crashes in production) | **Partial Types** (Limited compile-time solving) | **Complex Const Generics** (Heavy template bloat, dense error logs) | **Compile-Time Symbolic Solver** (Resolves matrix invariants during build) |
+| **Distribution & Cold Start** | **Bloated Containers** (4GB - 12GB Docker, 15s cold start) | **LLVM Toolchain** (Proprietary toolchain constraints) | **Cargo Build** (Long build times, cross-target friction) | **Standalone Single C99 Binary** (<5ms cold start, scratch images) |
+| **WebAssembly** | **Pyodide (>40 MB)** (Heavy, impractical in browsers) | **Limited** (Early stage) | **wasm-bindgen / Emscripten** (Extra abstraction layers) | **Native Microtask WASM** (<2MB zero-install in-browser inference) |
 
-### Neden Bu Ödünleşimler Aşıldı?
+### How Synapse Solves These Bottlenecks:
 
-1. **GIL Olmadan Çok Çekirdek Doygunluğu:** Synapse çekirdeğinde global yorumlayıcı kilidi (GIL) bulunmaz. Veri hazırlığı, tokenizasyon ve SSE akışı tüm CPU çekirdeklerine kilitlenmesiz dağıtılır.
-2. **Sembolik Tensör Çözücü:** `verify-shapes` statik analiz motoru, matris boyut kontratlarını (`Tensor[B, Seq, Dim]`) soyut sözdizim ağacında (AST) çözerek hatalı boyutları derleme anında yakalar.
-3. **C99 AOT Transpiler:** Yazdığınız her Synapse kodu doğrudan ANSI/ISO C99 koduna transpile edilir (`synapse emit-c`). Üretilen kod, herhangi bir C derleyicisi (`gcc`, `clang`, `cl.exe`) ile tek bir 0.21 MB ikiliye dönüşür.
+1. **Multi-Core Saturation Without a GIL:** Synapse has no Global Interpreter Lock. Data prefetching, tokenization, and SSE streaming scale lock-free across all CPU threads.
+2. **Symbolic Shape Guard:** The `verify-shapes` static solver inspects matrix shape contracts (`Tensor[B, Seq, Dim]`) directly on the Abstract Syntax Tree, catching dimension mismatches before compilation finishes.
+3. **C99 AOT Transpiler:** Synapse transpiles directly to clean, standard ISO C99 (`synapse emit-c`). Any C compiler (`gcc`, `clang`, `cl.exe`, `zig cc`) turns it into a lean 0.21 MB binary.
 
 ---
 
-## 💎 Katil Kullanım Senaryoları (Killer Architecture)
+## 💎 Killer Architectures
 
 ### 1. Edge NanoGPT: 0.21 MB C99 Standalone LLM Engine
 
-Synapse'in taahhüdü lafta kalmaz: [`examples/edge_nanogpt/`](examples/edge_nanogpt/) dizininde, hiçbir harici kütüphane (PyTorch, ONNX, CPython) içermeyen tam donanımlı bir **Causal Transformer** yer alır.
+Synapse proves its claims with a fully functional **Causal Transformer** located in [`examples/edge_nanogpt/`](examples/edge_nanogpt/), running with zero external dependencies (no PyTorch, ONNX, or CPython required):
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -124,7 +128,7 @@ Synapse'in taahhüdü lafta kalmaz: [`examples/edge_nanogpt/`](examples/edge_nan
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Örnek Model Tanımı (`model.syn`):
+#### Example Model Definition (`model.syn`):
 ```python
 # Layer Normalization: (x - mean) / sqrt(var + eps) * gamma + beta
 fn layer_norm(x: Tensor, gamma: Tensor, beta: Tensor) -> Tensor:
@@ -144,7 +148,7 @@ fn self_attention_block(x: Tensor, W_q: Tensor, W_k: Tensor, W_v: Tensor, W_o: T
     return (scores @ V) @ W_o
 ```
 
-Tek komutla yerel C derleyicisi üzerinden derleyin:
+Compile directly into a native executable with a single command:
 ```bash
 $ python examples/edge_nanogpt/build.py
 [OK] Standalone Native Binary compiled: examples/edge_nanogpt/nanogpt.exe (0.21 MB)
@@ -157,32 +161,32 @@ Architecture Config: vocab_size=64, d_model=32, seq_len=8
 
 ---
 
-### 2. Zero-Starvation DataLoader: No-GIL Veri Besleme
+### 2. Zero-Starvation DataLoader: No-GIL Data Feeding
 
-Geleneksel PyTorch boru hatlarında model GPU'da 2ms'de inferans alırken, Python veri yükleyicisi GIL kilidi ve `pickle` IPC maliyeti nedeniyle GPU'yu aç bırakır (**GPU Starvation**).
+In conventional PyTorch training pipelines, GPU compute stalls because Python multiprocessing workers serialize and deserialize tensors through the GIL and `pickle` IPC (**GPU Starvation**):
 
 ```text
-[ Geleneksel Python / PyTorch Pipeline ]
+[ Traditional Python / PyTorch Pipeline ]
 CPU Worker 1 ──┐
-CPU Worker 2 ──┼──> [ GIL Lock & Pickle IPC ] ──> GPU Starvation (%42 GPU Kullanımı)
+CPU Worker 2 ──┼──> [ GIL Lock & Pickle IPC ] ──> GPU Starvation (42% GPU Utilization)
 CPU Worker 3 ──┘
 
 [ Synapse AI Zero-Copy Pipeline ]
-Shared Memory (SafeTensors mmap) ──> [ Lock-Free CSP Channels ] ──> %99.4 GPU Doygunluğu
+Shared Memory (SafeTensors mmap) ──> [ Lock-Free CSP Channels ] ──> 99.4% GPU Saturation
 ```
 
-Synapse, **Apache Arrow IPC** ve **DLPack C-ABI** protokollerini yerel olarak destekler. Veri setleri diskten `mmap` edilerek RAM'de tek bir kopya olmadan doğrudan tensör işaretçilerine (`data_ptr`) bağlanır.
+Synapse natively supports **Apache Arrow IPC** and the **DLPack C-ABI**. Datasets are memory-mapped directly from disk (`mmap`), passing memory pointers directly to tensor operations (`data_ptr`) with zero RAM duplication.
 
 ---
 
 ### 3. Zero-Crash Static Shape Invariants (`verify-shapes`)
 
-Çalışma zamanında saatler süren eğitimlerin ardından ortaya çıkan matris boyutu uyuşmazlıkları Synapse derleyicisinde imkânsızdır:
+Runtime matrix dimension errors that crash training runs halfway through are eliminated before execution ever begins:
 
 ```python
-# Sözdizimsel şekil kontratı:
+# Syntactic shape contract:
 fn cross_attention(query: Tensor[B, S, D], key: Tensor[B, S, D]) -> Tensor[B, S, S]:
-    # Eğer iç boyutlar eşleşmezse derleyici işlemi DURDURUR:
+    # If inner dimensions do not match, the compiler rejects the code at build time:
     return query @ key.T
 ```
 
@@ -191,7 +195,7 @@ $ synapse verify-shapes pipeline.syn
 [PASS] 14 Tensor operations verified. All invariants satisfied.
 ```
 
-Eğer bir hata varsa, derleyici satır ve sütun bazında görsel onarım önerisi üretir:
+If a mismatch is found, the compiler pinpoints the error and suggests a visual fix:
 ```text
 ShapeMismatchError: Line 42 in attention.syn
   Cannot multiply Tensor[32, 64] with Tensor[32, 128].
@@ -201,15 +205,15 @@ ShapeMismatchError: Line 42 in attention.syn
 
 ---
 
-## 🖥️ Yerel Tarayıcı Deneyimi (Interactive Playground)
+## 🖥️ In-Browser Interactive Studio (Playground)
 
-Hiçbir kurulum yapmadan Synapse'i doğrudan web tarayıcınızda deneyimleyin. [`playground/index.html`](playground/index.html) dosyası, WebAssembly ve Web Worker mimarisiyle izole bir sanal makineyi tarayıcınızda çalıştırır:
+Experience Synapse directly in your web browser with zero installation. The [`playground/index.html`](playground/index.html) application runs an isolated virtual machine compiled to WebAssembly via Web Workers:
 
 ```bash
-# Yerel playground sunucusunu başlatın:
+# Start the local playground development server:
 python playground/server.py --port 3000
 ```
-Ardından tarayıcınızda açın: **`http://localhost:3000`**
+Then open: **`http://localhost:3000`**
 
 ```text
 ┌─ Synapse Interactive Studio ──────────────────────────────────────────┐
@@ -222,39 +226,39 @@ Ardından tarayıcınızda açın: **`http://localhost:3000`**
 └─────────────────────────────────────┴─────────────────────────────────┘
 ```
 
-* **15-Minute Interactive Tour:** Yerleşik adımlarla Autograd, Ajan Sürüleri ve Pipeline mantığını interaktif kodlayarak öğrenin.
-* **Sıfır Sunucu Maliyeti:** Tüm AST analizi ve bytecode yürütümü istemci tarafında gerçekleşir.
+* **15-Minute Interactive Tour:** Learn autograd, agent swarms, and pipeline operators step-by-step.
+* **Zero Cloud Latency:** AST parsing, type checking, and bytecode execution happen 100% client-side.
 
 ---
 
-## 🧰 Kapsamlı CLI Araç Seti
+## 🧰 Comprehensive CLI Tooling
 
-Synapse, modern geliştirici deneyimi için gerekli tüm araçları tek bir ikilide sunar:
+Synapse bundles everything needed for systems AI engineering into a single unified binary:
 
-| Komut | Açıklama |
+| Command | Description |
 | :--- | :--- |
-| `synapse run <dosya.syn>` | Synapse kaynak dosyasını VM üzerinde doğrudan yürütür (`--profile`, `--ai-tolerant`). |
-| `synapse emit-c <dosya.syn>` | Kodu sıfır bağımlılıklı, son derece optimize saf **ISO C99** koduna dönüştürür. |
-| `synapse build <dosya.syn>` | Bağımsız Windows `.exe`, Linux ELF veya WebAssembly (`--target wasm`) derler. |
-| `synapse verify-shapes <dosya>` | Tensör boyutlarını (`Tensor[M, N]`) derleme anında sembolik olarak denetler. |
-| `synapse check <dosya.syn>` | Statik tip, sözdizimi ve kontrat ihlallerini denetler (`--json` destekler). |
-| `synapse fix <dosya.syn>` | AI modellerinden kaynaklanan sözdizimi sapmalarını otomatik onarır (`--diff`). |
-| `synapse fmt <dosya.syn>` | Kodu Vercel/Linear kodlama standartlarına göre otomatik biçimlendirir. |
-| `synapse repl` | Akıllı renklendirme ve canlı tensör önizlemeli interaktif kabuğu başlatır. |
-| `synapse test [yol]` | Yerleşik birim ve regresyon test paketini çalıştırır. |
-| `synapse pkg <alt-komut>` | Bağımlılık yöneticisi (`init`, `add`, `lock`, `install`, `publish`). |
-| `synapse mcp` | Cursor, Claude Desktop ve Antigravity için Model Context Protocol sunucusunu başlatır. |
-| `synapse dap` | VS Code için Debug Adapter Protocol (DAP) hata ayıklayıcısını ayağa kaldırır. |
-| `synapse doc <dosya.syn>` | Kaynak koddan otomatik teknik dokümantasyon veya HTML (`--html`) üretir. |
+| `synapse run <file.syn>` | Executes a Synapse script on the VM (`--profile`, `--ai-tolerant`). |
+| `synapse emit-c <file.syn>` | Transpiles code to optimized, zero-dependency **ISO C99** source. |
+| `synapse build <file.syn>` | Compiles a standalone native executable (`.exe`, ELF) or WebAssembly (`--target wasm`). |
+| `synapse verify-shapes <file>` | Symbolically verifies tensor shape invariants (`Tensor[M, N]`) at build time. |
+| `synapse check <file.syn>` | Audits static types, syntax, and contracts (`--json` supported). |
+| `synapse fix <file.syn>` | Automatically repairs syntax discrepancies produced by LLM code generation (`--diff`). |
+| `synapse fmt <file.syn>` | Auto-formats code to clean Linear/Vercel standards. |
+| `synapse repl` | Launches an interactive REPL with syntax highlighting and live tensor previews. |
+| `synapse test [path]` | Runs the built-in unit and regression test suite. |
+| `synapse pkg <subcommand>` | Package and dependency manager (`init`, `add`, `lock`, `install`, `publish`). |
+| `synapse mcp` | Launches a Model Context Protocol server for Cursor, Claude Desktop, and Antigravity. |
+| `synapse dap` | Starts a Debug Adapter Protocol (DAP) server for VS Code debugging. |
+| `synapse doc <file.syn>` | Generates technical Markdown or HTML (`--html`) documentation from source. |
 
 ---
 
-## 🧩 Dil Özellikleri ve Kod Örnekleri
+## 🧩 Language Features & Code Examples
 
-### 1. Ters Mod Otomatik Türev (Autograd) & MLP Eğitimi
+### 1. Reverse-Mode Autograd & MLP Training
 
 ```python
-# Sequential MLP Mimarisi
+# Sequential MLP Architecture
 let model = Sequential([
     Linear(2, 4),
     ReLU(),
@@ -267,7 +271,7 @@ let criterion = MSELoss()
 let X = tensor([[1.0, 1.0], [1.0, 2.0], [2.0, 1.0], [2.0, 2.0]])
 let Y = tensor([[3.0], [5.0], [4.0], [6.0]])
 
-# 20 Epoch Eğitim Döngüsü
+# 20 Epoch Training Loop
 let epoch = 1
 while epoch <= 20:
     let y_pred = model(X)
@@ -282,34 +286,34 @@ while epoch <= 20:
     epoch += 1
 ```
 
-### 2. Yerleşik Vektör Bellek (RAG) ve Otonom Ajan Sürüsü
+### 2. Built-in Semantic Memory (RAG) & Autonomous Agent Swarms
 
-Harici bir vektör veritabanına gerek duymadan dil seviyesinde semantik bellek ve çoklu ajan konsensüsü:
+First-class language constructs for semantic recall and multi-agent debate without third-party vector databases:
 
 ```python
-# 1. Yerleşik Anlamsal Vektör Bellek
+# 1. Native Semantic Memory
 let brain = memory()
-brain.remember("Synapse, ISO C99 standardına derlenen bağımsız bir AI sistem dilidir.")
-let docs = brain.recall("Synapse nasıl derlenir?", top_k=1)
+brain.remember("Synapse is an AI-native systems language transpiling to standalone ISO C99.")
+let docs = brain.recall("How is Synapse compiled?", top_k=1)
 
-# 2. Çoklu Ajan Deklarasyonu
+# 2. Multi-Agent Declaration
 agent Architect:
     model: "gpt-4o"
-    instructions: "Sistem mimarisi ve bellek verimliliği uzmanısın."
+    instructions: "You are an expert in systems architecture and memory optimization."
 
 agent Reviewer:
     model: "claude-3-5-sonnet"
-    instructions: "Güvenlik, tip kontratları ve kod optimizasyonu uzmanısın."
+    instructions: "You are an expert in safety, type contracts, and code review."
 
-# 3. Konsensüs Tartışması (Debate Swarm)
-let task = "0.21 MB boyutundaki standalone ikililerin mikroservis mimarisine etkilerini değerlendirin."
+# 3. Consensus Debate Swarm
+let task = "Assess the architectural impact of 0.21 MB standalone binaries on edge microservices."
 let consensus = debate([Architect, Reviewer], task, rounds=2)
-print("Uzlaşı Kararı:", consensus)
+print("Consensus Verdict:", consensus)
 ```
 
-### 3. Yerleşik Web Sunucusu ve Realtime SSE Akışı
+### 3. Built-in HTTP Server & Real-Time SSE Streaming
 
-Harici web çatısı gerektirmeyen entegre mikroservis motoru:
+High-throughput embedded networking without external web frameworks:
 
 ```python
 fn handle_status(req):
@@ -320,7 +324,7 @@ fn handle_status(req):
     }
 
 fn handle_chat(req):
-    # LLM token çıktılarını istemciye doğrudan Server-Sent Events ile akıt
+    # Stream LLM token outputs directly to clients via Server-Sent Events
     return sse_stream(tokens)
 
 let app = web.create_server(port=8080)
@@ -331,54 +335,54 @@ app.listen()
 
 ---
 
-## 📁 Örnek Projeler Rehberi (`examples/`)
+## 📁 Examples Directory Guide (`examples/`)
 
-| Proje / Dizin | Kategori | Açıklama |
+| Project / Path | Category | Description |
 | :--- | :--- | :--- |
-| [`edge_nanogpt/`](examples/edge_nanogpt/) | **Edge LLM / AOT** | **0.21 MB bağımsız C99 Transformer çıkarım motoru (Katil Demo).** |
-| [`01_tensor_math.syn`](examples/01_tensor_math.syn) | Tensörler & Pipeler | Matris çarpımları, broadcasting ve `\|>` operatörü. |
-| [`02_autograd_training.syn`](examples/02_autograd_training.syn) | Autograd & Optimizasyon | Ters mod türev ile doğrusal regresyon eğitimi. |
-| [`03_ai_agent_prompt.syn`](examples/03_ai_agent_prompt.syn) | LLM & Ajanlar | Tip güvenli prompt şablonları ve dinamik çıkarım. |
-| [`04_neural_network_mlp.syn`](examples/04_neural_network_mlp.syn) | Derin Öğrenme | `Sequential`, `Linear`, `ReLU`, `Adam` sinir ağı. |
-| [`05_next_gen_ai.syn`](examples/05_next_gen_ai.syn) | Çoklu Ajan Sürüsü | `memory()`, `swarm()`, `debate()` ile otonom uzlaşı. |
-| [`06_advanced_stdlib_and_contracts.syn`](examples/06_advanced_stdlib_and_contracts.syn) | Standart Kütüphane | `std.math`, `std.crypto`, `std.fs` ve boyut kontratları. |
-| [`07_ai_researcher_critic_pipeline.syn`](examples/07_ai_researcher_critic_pipeline.syn) | Otonom İş Akışları | Araştırmacı-Eleştirmen boru hattı mimarisi. |
-| [`08_ai_web_app.syn`](examples/08_ai_web_app.syn) | Full-Stack & API | Yerleşik HTTP sunucusu, SSE akışı ve REST API. |
-| [`09_ecommerce_app.syn`](examples/09_ecommerce_app.syn) | Semantik Arama | Ürün tavsiye motoru ve semantik RAG entegrasyonu. |
-| [`edge_wasm_inference/`](examples/edge_wasm_inference/) | WebAssembly | Tarayıcıda sıfır kurulumla çalışan WASM çıkarımı. |
-| [`enterprise_rag_service/`](examples/enterprise_rag_service/) | Kurumsal RAG | SafeTensors ağırlık serileştirme ve kurumsal arama. |
+| [`edge_nanogpt/`](examples/edge_nanogpt/) | **Edge LLM / AOT** | **0.21 MB standalone C99 Transformer inference engine (Flagship Demo).** |
+| [`01_tensor_math.syn`](examples/01_tensor_math.syn) | Tensors & Pipelines | Matrix multiplication, broadcasting, and the `\|>` pipeline operator. |
+| [`02_autograd_training.syn`](examples/02_autograd_training.syn) | Autograd & Optimization | Linear regression training using reverse-mode autodiff. |
+| [`03_ai_agent_prompt.syn`](examples/03_ai_agent_prompt.syn) | LLM & Agents | Type-safe prompt templating and dynamic inference. |
+| [`04_neural_network_mlp.syn`](examples/04_neural_network_mlp.syn) | Deep Learning | `Sequential`, `Linear`, `ReLU`, `Adam` neural network. |
+| [`05_next_gen_ai.syn`](examples/05_next_gen_ai.syn) | Multi-Agent Swarm | Autonomous swarm consensus with `memory()`, `swarm()`, and `debate()`. |
+| [`06_advanced_stdlib_and_contracts.syn`](examples/06_advanced_stdlib_and_contracts.syn) | Standard Library | `std.math`, `std.crypto`, `std.fs`, and shape contracts. |
+| [`07_ai_researcher_critic_pipeline.syn`](examples/07_ai_researcher_critic_pipeline.syn) | Autonomous Workflows | Researcher-Critic pipeline architecture. |
+| [`08_ai_web_app.syn`](examples/08_ai_web_app.syn) | Full-Stack & API | Embedded HTTP server, SSE token streaming, and REST endpoints. |
+| [`09_ecommerce_app.syn`](examples/09_ecommerce_app.syn) | Semantic Search | Product recommendation engine with embedded semantic RAG. |
+| [`edge_wasm_inference/`](examples/edge_wasm_inference/) | WebAssembly | Zero-install browser inference via WebAssembly. |
+| [`enterprise_rag_service/`](examples/enterprise_rag_service/) | Enterprise RAG | SafeTensors weight serialization and enterprise search. |
 
 ---
 
-## 🛠️ Editör Desteği (VS Code & Cursor)
+## 🛠️ Editor Tooling (VS Code & Cursor)
 
-Synapse, birinci sınıf editör araçlarına sahiptir:
+Synapse includes first-class developer tooling:
 
-* **Sözdizimi Vurgulama:** `.syn` ve `.ai` uzantılı dosyalar için özel TextMate dil tanımları.
-* **Hata Ayıklayıcı (DAP):** `synapse dap` ile satır satır breakpoint, değişken ve çağrı yığını takibi.
-* **Dil Sunucusu (LSP):** Gerçek zamanlı statik analiz, otomatik tamamlama ve self-healing tanılamalar.
-* **Hazır VSIX Paketi:** Tek tıkla VS Code'a yükleyin:
+* **Syntax Highlighting:** TextMate grammar definitions for `.syn` and `.ai` source files.
+* **Debugger (DAP):** Line-by-line breakpoints, variable inspection, and call stack tracing via `synapse dap`.
+* **Language Server (LSP):** Real-time static diagnostics, auto-completion, and self-healing fixes.
+* **Pre-Built VSIX Extension:** Install directly into VS Code with one command:
   ```bash
   code --install-extension editors/vscode/synapse-lang-1.0.0.vsix
   ```
 
 ---
 
-## 🧪 Test Paketi ve Mühendislik Kalitesi
+## 🧪 Test Suite & Engineering Rigor
 
-Synapse, endüstriyel standartlarda katı bir test disiplini ile geliştirilmektedir:
+Synapse is engineered with strict industrial-grade test discipline:
 
 ```bash
-# Tüm test paketini yürütün:
+# Run the entire test suite via pytest:
 pytest
-# ya da yerleşik Synapse test koşucusuyla:
+# or via the built-in Synapse test runner:
 synapse test
 ```
 
 ```text
 ============================= test session starts =============================
-platform win32 -- Python 3.11.x, pytest-8.x.x
-collected 922 items
+platform win32 -- Python 3.11.x, pytest-9.x.x
+collected 943 items
 
 tests/test_lexer.py .................................................... [  5%]
 tests/test_parser.py ................................................... [ 12%]
@@ -388,19 +392,20 @@ tests/test_nn_layers.py ................................................ [ 48%]
 tests/test_shape_invariants.py ......................................... [ 62%]
 tests/test_c99_transpiler.py ........................................... [ 78%]
 tests/test_edge_nanogpt.py ............................................. [ 89%]
+tests/test_security_audit.py ........................................... [ 95%]
 tests/test_agents_and_swarm.py ......................................... [100%]
 
-======================== 922 passed in 131.42s (100%) =========================
+======================== 943 passed in 266.26s (100%) =========================
 ```
 
 ---
 
-## 📄 Lisans
+## 📄 License
 
-Synapse, [MIT Lisansı](LICENSE) kapsamında açık kaynaklıdır. Dünyanın her yerindeki mühendisler, araştırmacılar ve otonom sistem geliştiricileri tarafından özgürce kullanılabilir, değiştirilebilir ve ticarileştirilebilir.
+Synapse is open-source software licensed under the [MIT License](LICENSE). Developers, researchers, and autonomous systems engineers worldwide are free to build, modify, and commercialize applications powered by Synapse.
 
 <div align="center">
 
-**[Synapse GitHub Deposunu Yıldızlayın ⭐](https://github.com/cagannbl/synapse)** • Modern AI sistem mühendisliğine siz de katılın.
+**[Star Synapse on GitHub ⭐](https://github.com/cagannbl/synapse)** • Join the future of systems AI engineering.
 
 </div>
