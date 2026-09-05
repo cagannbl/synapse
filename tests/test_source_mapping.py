@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import tempfile
 import pytest
@@ -32,17 +32,17 @@ print(a)
 
 def test_windows_path_normalization():
     """Windows ters eğik çizgi dosya yollarının POSIX standardına ('/') normalize edildiğini ve GCC/Clang \\U kaçış hatasını önlediğini doğrular."""
-    win_path = r"C:\Users\cagan\Desktop\SynapseApp\src\neural_net.syn"
+    win_path = r"D:\DevWorkspace\SynapseApp\src\neural_net.syn"
     source = "let weight = 0.5\nprint(weight)\n"
 
     c_code = transpile_to_c(source, filename=win_path)
 
-    expected_normalized = "C:/Users/cagan/Desktop/SynapseApp/src/neural_net.syn"
+    expected_normalized = "D:/DevWorkspace/SynapseApp/src/neural_net.syn"
     assert f'#line 1 "{expected_normalized}"' in c_code
     assert f'#line 2 "{expected_normalized}"' in c_code
 
-    # Asla derleyiciyi kıracak ters eğik çizgi (\\Users, \\s vb.) içermemeli
-    assert r"\Users" not in c_code
+    # Asla derleyiciyi kıracak ters eğik çizgi (\\DevWorkspace, \\s vb.) içermemeli
+    assert r"\DevWorkspace" not in c_code
     assert "\\\\" not in c_code or "\\n" in c_code  # Sadece C string kaçışları kalabilir
 
 

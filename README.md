@@ -143,6 +143,21 @@ Python Bytecode Engine (VM)                                                     
                                                                                                 - Transpiles to 0.21 MB Native Executables
 ```
 
+### 💡 Architecture FAQ: Why is the Compiler Frontend Written in Python?
+
+> *"Isn't writing a systems compiler in Python contradictory to high performance?"*
+
+**Not at all.** Synapse deliberately adopts the proven architecture used by the world's most performant deep learning compilers:
+
+* **PyTorch 2.0 (TorchInductor):** The entire Inductor compiler (`torch/_inductor/`) is written in Python. It parses computational graphs, optimizes memory layouts, and emits raw, high-performance C++/Triton code.
+* **OpenAI Triton:** The frontend compiler and IR passes are written in Python, lowering directly to LLVM IR and PTX GPU assembly.
+* **Cython:** The ubiquitous Python-to-C/C++ transpiler is itself written in Python.
+* **Historical Bootstrapping:** Every modern systems language begins with an existing high-level host language (Rust's first compiler was in OCaml, Go's in C, Nim's in Pascal) before reaching self-hosting maturity.
+
+In Synapse:
+1. **Compile-Time (~50ms):** Python handles high-level ergonomic tasks: AST parsing, type checking, symbolic shape solving, and agentic error diagnostics.
+2. **Runtime ($0$ms Python):** The emitted binary is pure **ISO C99 machine code**. There is **no Python runtime, no CPython interpreter, no GIL, and no garbage collector** in production binaries.
+
 ---
 
 ## 💎 Killer Architectures

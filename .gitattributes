@@ -1,0 +1,19 @@
+﻿# Auto-detect text files and normalize line endings
+* text=auto eol=lf
+
+# Exclude auxiliary test suites, scripts, packages, and documentation from GitHub Linguist repository language stats
+tests/** linguist-vendored=true
+benchmarks/** linguist-vendored=true
+scripts/** linguist-vendored=true
+packages/** linguist-vendored=true
+playground/** linguist-documentation=true
+docs/** linguist-documentation=true
+*.md linguist-documentation=true
+
+# Highlight C99 Systems Runtime and Native Synapse Code
+synapse/runtime/** linguist-detectable=true
+synapse/runtime/** linguist-vendored=false
+*.c linguist-detectable=true
+*.h linguist-detectable=true
+*.syn linguist-detectable=true
+*.syn linguist-language=Rust

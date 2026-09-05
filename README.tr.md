@@ -142,6 +142,21 @@ Python Bytecode Motoru (VM)                                                     
 - WebAssembly Microtask Motoru                                                                  - Monomorfik Tagged Unions (Option/Result)
                                                                                                 - 0.21 MB Bağımsız Yerel İkililer Üretir
 ```
+ 
+### 💡 Mimari SSS: Derleyici Ön Yüzü Neden Python ile Yazıldı?
+
+> *"Sistem programlama dilinin derleyicisinin Python ile yazılması yüksek başarımla çelişmez mi?"*
+
+**Kesinlikle hayır.** Synapse, dünyanın en gelişmiş yapay zeka derleyicilerinin benimsediği kanıtlanmış endüstri standardını takip eder:
+
+* **PyTorch 2.0 (TorchInductor):** PyTorch'un modelleri hızlandıran Inductor derleyicisinin tamamı (`torch/_inductor/`) saf Python ile yazılmıştır. Hesaplama grafiklerini analiz eder ve bare-metal C++/Triton kodu üretir.
+* **OpenAI Triton:** Derleyici ön yüzü ve IR optimizasyonları Python ile yazılmış olup doğrudan LLVM IR ve GPU PTX koduna indirger.
+* **Cython:** Python kodunu saf C/C++ ikilisine çeviren küresel standart, baştan sona Python ile yazılmıştır.
+* **Tarihsel Bootstrapping:** Tüm modern sistem dilleri başlangıç aşamasında var olan güçlü bir dille yazılır (Rust'ın ilk derleyicisi OCaml, Go'nun C, Nim'in Pascal ile yazılmıştır).
+
+Synapse'te:
+1. **Derleme Anı (~50ms):** Python yalnızca kaynak kodun AST'sini ayrıştırır, statik şekil/tip denetimi yapar ve C99 kodunu üretir.
+2. **Çalışma Zamanı ($0$ms Python):** Üretilen 0.21 MB ikilide (`.exe`) **Python, CPython, GIL veya GC ASLA ÇALIŞMAZ.** Yalnızca saf ISO C99 makine kodu ve O(1) Arena bellek havuzu koşar.
 
 ---
 
