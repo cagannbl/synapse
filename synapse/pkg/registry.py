@@ -502,7 +502,10 @@ class PackageRegistry:
                 member_path = os.path.realpath(os.path.join(dest_dir, member.name))
                 if not member_path.startswith(dest_canonical):
                     raise PackageError(f"Attempted path traversal in package archive: {member.name}")
-                tar.extract(member, path=dest_dir)
+                try:
+                    tar.extract(member, path=dest_dir, filter="data")
+                except TypeError:
+                    tar.extract(member, path=dest_dir)
 
         # Update synapse.toml dependencies
         with open(manifest_path, "r", encoding="utf-8") as f:

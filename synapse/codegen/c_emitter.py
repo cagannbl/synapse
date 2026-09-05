@@ -10,9 +10,9 @@ from synapse.parser.ast_nodes import (
 
 
 class CEmitter:
-    def __init__(self, include_line_directives: bool = True):
+    def __init__(self, include_line_directives: bool = True, current_filename: str = "<source>"):
         self.include_line_directives = include_line_directives
-        self.current_filename = "<source>"
+        self.current_filename = self._normalize_filename(current_filename or "<source>")
         self.last_emitted_line = -1
         self.indent_level = 1
         self.tensor_counter = 0
@@ -34,15 +34,37 @@ class CEmitter:
         # key -> (c_type_t, suffix_t, c_type_e, suffix_e)
         self.registered_results: dict[str, tuple[str, str, str, str]] = {}
 
+    @staticmethod
+    def _normalize_filename(filename: Optional[str]) -> str:
+        """
+        Dosya yolunu POSIX standardına ('/') normalize eder ve GCC/Clang/MSVC için
+        geçersiz kaçış dizilerini (örn. 'C:\\Users...' içindeki '\\U') önler.
+        """
+        if not filename:
+            return "<source>"
+        normalized = str(filename).replace("\\", "/")
+        return normalized.replace('"', '\\"')
+
     def _format_line_directive(self, node: Any, force: bool = False) -> Optional[str]:
+        """
+        AST düğümü (Stmt, Expr) için standart C99 '#line <line> \"<filename>\"' direktifini üretir.
+        Ardışık aynı satırlarda tekrar basılmasını önler.
+        """
         if not self.include_line_directives:
             return None
         line = getattr(node, "line", None)
+        if line is None or not isinstance(line, int) or line <= 0:
+            for attr in ("expr", "value", "target", "condition"):
+                child = getattr(node, attr, None)
+                if child is not None:
+                    c_line = getattr(child, "line", None)
+                    if c_line is not None and isinstance(c_line, int) and c_line > 0:
+                        line = c_line
+                        break
         if line is not None and isinstance(line, int) and line > 0:
             if force or line != self.last_emitted_line:
                 self.last_emitted_line = line
-                escaped_filename = self.current_filename.replace('"', '\\"')
-                return f'#line {line} "{escaped_filename}"'
+                return f'#line {line} "{self.current_filename}"'
         return None
 
     @property
@@ -244,9 +266,15 @@ class CEmitter:
             return "syn_tensor_t*"
         return default
 
-    def emit(self, program: Program, filename: str = "<source>") -> str:
+    def emit(self, program: Program, filename: Optional[str] = None) -> str:
         body_lines: list[str] = []
-        self.current_filename = (filename or "<source>").replace("\\", "/")
+        if filename is not None:
+            self.current_filename = self._normalize_filename(filename)
+        elif not self.current_filename:
+            self.current_filename = "<source>"
+        else:
+            self.current_filename = self._normalize_filename(self.current_filename)
+
         self.last_emitted_line = -1
         self.prototypes.clear()
         self.functions_code.clear()
@@ -270,13 +298,19 @@ class CEmitter:
                     if p.type_annot:
                         self.map_type(p.type_annot)
 
-        # 2. Faz: Fonksiyonları ve ana gövdeyi emit et
+        # 2. Faz: Fonksiyonları emit et
         for stmt in program.statements:
             if isinstance(stmt, FunctionDef):
                 self.functions_code.append(self.emit_function(stmt))
-            else:
+
+        # 3. Faz: Ana gövdeyi emit et
+        self.last_emitted_line = -1
+        for stmt in program.statements:
+            if not isinstance(stmt, FunctionDef):
                 self.current_fn_return_type = "int"
-                body_lines.append(self.emit_stmt(stmt))
+                code = self.emit_stmt(stmt)
+                if code:
+                    body_lines.append(code)
                 self.current_fn_return_type = None
 
         c_code = [
@@ -640,12 +674,16 @@ class CEmitter:
         else:
             stmt_code = f"{self.indent()}/* unhandled statement */;"
 
-        if line_dir:
-            stmt_code = f"{line_dir}\n{stmt_code}"
         if self.pre_stmts:
-            stmt_code = "\n".join(self.pre_stmts) + "\n" + stmt_code
+            full_stmt = "\n".join(self.pre_stmts) + "\n" + stmt_code
+        else:
+            full_stmt = stmt_code
+
+        if line_dir:
+            full_stmt = f"{line_dir}\n{full_stmt}"
+
         self.pre_stmts = saved_pre
-        return stmt_code
+        return full_stmt
 
     def emit_match_stmt(self, stmt: MatchStmt) -> str:
         """Pattern Matching (MatchStmt) ifadesini C switch/if-else bloklarına dönüştürür."""

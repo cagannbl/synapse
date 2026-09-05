@@ -39,6 +39,8 @@ class CompileTimeShapeMismatchError(Exception):
         source_line: str = "",
         pointer: str = "",
         suggested_fix: Optional[str] = None,
+        diff: Optional[str] = None,
+        code: str = "SYN-E202",
     ):
         self.message = message
         self.line = max(1, line)
@@ -47,6 +49,8 @@ class CompileTimeShapeMismatchError(Exception):
         self.actual = actual
         self.source_line = source_line
         self.suggested_fix = suggested_fix
+        self.diff = diff
+        self.code = code
 
         col_idx = max(0, self.column - 1)
         self.ascii_pointer = pointer if pointer else " " * col_idx + "^"
@@ -75,20 +79,44 @@ class CompileTimeShapeMismatchError(Exception):
         return "\n".join(lines)
 
     def to_diagnostic_report(self, filepath: str = "<source>") -> DiagnosticReport:
-        return DiagnosticReport(
-            status="error",
-            error_type="CompileTimeShapeMismatchError",
-            message=self.message,
+        from synapse.core.diagnostics import Diagnostic
+        exp_str = str(self.expected) if self.expected is not None else None
+        act_str = str(self.actual) if self.actual is not None else None
+        diag = Diagnostic(
+            file=filepath,
             line=self.line,
             column=self.column,
+            severity="error",
+            code=self.code,
+            message=self.message,
+            expected=exp_str,
+            actual=act_str,
+            suggested_fix=self.suggested_fix,
+            diff=self.diff,
             source_line=self.source_line,
             pointer=self.pointer,
+        )
+        return DiagnosticReport(
+            status="error",
+            diagnostics=[diag],
+            file=filepath,
+            line=self.line,
+            column=self.column,
+            severity="error",
+            code=self.code,
+            message=self.message,
+            expected=exp_str,
+            actual=act_str,
             suggested_fix=self.suggested_fix,
+            diff=self.diff,
+            error_type="CompileTimeShapeMismatchError",
+            source_line=self.source_line,
+            pointer=self.pointer,
             ai_prompt_hint="Tensor shape mismatch at compile time. Verify matrix dimensions, transpose (.T), or broadcasting rules.",
             details={
                 "filepath": filepath,
-                "expected": str(self.expected) if self.expected is not None else None,
-                "actual": str(self.actual) if self.actual is not None else None,
+                "expected": exp_str,
+                "actual": act_str,
             },
         )
 

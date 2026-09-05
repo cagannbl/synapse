@@ -397,23 +397,75 @@ class StaticTypeChecker:
         suggested_fix: Optional[str] = None,
         hint: Optional[str] = None,
         details: Optional[dict[str, Any]] = None,
+        expected: Optional[str] = None,
+        actual: Optional[str] = None,
+        diff: Optional[str] = None,
+        code: Optional[str] = None,
     ):
         line = getattr(node, "line", 1) or 1
         col = getattr(node, "column", 1) or 1
         source_line = _extract_source_line(self.source, line)
         pointer = _generate_pointer(col)
 
-        report = DiagnosticReport(
-            status="error",
-            error_type=error_type,
-            message=message,
+        det = details or {}
+        exp_val = expected
+        act_val = actual
+        if exp_val is None:
+            if "expected_shape" in det:
+                exp_val = str(det["expected_shape"])
+            elif "declared_return" in det:
+                exp_val = str(det["declared_return"])
+            elif "expected" in det:
+                exp_val = str(det["expected"])
+        if act_val is None:
+            if "actual_shape" in det:
+                act_val = str(det["actual_shape"])
+            elif "actual_return" in det:
+                act_val = str(det["actual_return"])
+            elif "actual" in det:
+                act_val = str(det["actual"])
+
+        err_code = code
+        if not err_code:
+            if "shape" in error_type.lower() or "dimension" in message.lower() or "shape" in message.lower() or "@" in message:
+                err_code = "SYN-E202"
+            else:
+                err_code = "SYN-E201"
+
+        from synapse.core.diagnostics import Diagnostic
+        diag = Diagnostic(
+            file=self.filepath,
             line=line,
             column=col,
+            severity="error",
+            code=err_code,
+            message=message,
+            expected=exp_val,
+            actual=act_val,
+            suggested_fix=suggested_fix,
+            diff=diff,
             source_line=source_line,
             pointer=pointer,
+        )
+
+        report = DiagnosticReport(
+            status="error",
+            diagnostics=[diag],
+            file=self.filepath,
+            line=line,
+            column=col,
+            severity="error",
+            code=err_code,
+            message=message,
+            expected=exp_val,
+            actual=act_val,
             suggested_fix=suggested_fix,
+            diff=diff,
+            error_type=error_type,
+            source_line=source_line,
+            pointer=pointer,
             ai_prompt_hint=hint,
-            details=details or {},
+            details=det,
         )
         self.errors.append(report)
 
@@ -1561,12 +1613,27 @@ def check_source(source: str, filepath: str = "<source>") -> TypeCheckResult:
     except LexerError as e:
         source_line = _extract_source_line(source, e.line)
         pointer = _generate_pointer(e.column)
-        report = DiagnosticReport(
-            status="error",
-            error_type="LexerError",
-            message=str(e),
+        from synapse.core.diagnostics import Diagnostic
+        diag = Diagnostic(
+            file=filepath,
             line=e.line,
             column=e.column,
+            severity="error",
+            code="SYN-E101",
+            message=str(e),
+            source_line=source_line,
+            pointer=pointer,
+        )
+        report = DiagnosticReport(
+            status="error",
+            diagnostics=[diag],
+            file=filepath,
+            line=e.line,
+            column=e.column,
+            severity="error",
+            code="SYN-E101",
+            error_type="LexerError",
+            message=str(e),
             source_line=source_line,
             pointer=pointer,
         )
@@ -1578,12 +1645,28 @@ def check_source(source: str, filepath: str = "<source>") -> TypeCheckResult:
     except ParseError as e:
         source_line = _extract_source_line(source, e.token.line)
         pointer = _generate_pointer(e.token.column)
-        report = DiagnosticReport(
-            status="error",
-            error_type="ParseError",
-            message=str(e),
+        from synapse.core.diagnostics import Diagnostic
+        diag = Diagnostic(
+            file=filepath,
             line=e.token.line,
             column=e.token.column,
+            severity="error",
+            code="SYN-E102",
+            message=str(e),
+            actual=str(e.token.value) if hasattr(e.token, "value") else None,
+            source_line=source_line,
+            pointer=pointer,
+        )
+        report = DiagnosticReport(
+            status="error",
+            diagnostics=[diag],
+            file=filepath,
+            line=e.token.line,
+            column=e.token.column,
+            severity="error",
+            code="SYN-E102",
+            error_type="ParseError",
+            message=str(e),
             source_line=source_line,
             pointer=pointer,
         )

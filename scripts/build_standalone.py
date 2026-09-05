@@ -109,6 +109,8 @@ def main():
     args = parser.parse_args()
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
     os.chdir(project_root)
 
     # Ensure embedded runtime is up to date before packaging

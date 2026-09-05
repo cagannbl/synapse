@@ -671,14 +671,15 @@ class VirtualMachine:
                             self.globals[leaf_name] = imported_module
                         if is_python:
                             root_pkg = mod_str.split(".")[0]
-                            py_ns = self.globals.get("py")
-                            if py_ns is None or not hasattr(py_ns, "__dict__"):
-                                class _PyNamespace:
-                                    pass
-                                py_ns = _PyNamespace()
-                                self.globals["py"] = py_ns
-                                frame.locals["py"] = py_ns
-                            setattr(py_ns, root_pkg, imported_module)
+                            for ns_key in ("py", "python"):
+                                py_ns = self.globals.get(ns_key)
+                                if py_ns is None or not hasattr(py_ns, "__dict__"):
+                                    class _PyNamespace:
+                                        pass
+                                    py_ns = _PyNamespace()
+                                    self.globals[ns_key] = py_ns
+                                    frame.locals[ns_key] = py_ns
+                                setattr(py_ns, root_pkg, imported_module)
                     except Exception as e:
                         raise VMRuntimeError(f"Failed to import Python module '{mod_str}': {e}", line=current_line, column=current_col) from e
 

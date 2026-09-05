@@ -636,15 +636,42 @@ class Parser:
         return MatchStmt(line=tok.line, column=tok.column, subject=subject, cases=cases)
 
     def parse_import_stmt(self) -> ImportStmt:
-        tok = self.advance()  # import
+        tok = self.advance()  # 'import' or 'from'
         is_python = False
 
-        # py.numpy kontrolü
+        if tok.type == TokenType.FROM:
+            p1 = self.expect(TokenType.IDENTIFIER, "Expected module name after 'from'")
+            parts: list[str] = []
+            if p1.value in ("py", "python"):
+                is_python = True
+                while self.match(TokenType.DOT):
+                    p = self.expect(TokenType.IDENTIFIER, "Expected identifier after '.' in from import")
+                    parts.append(p.value)
+                self.expect(TokenType.IMPORT, "Expected 'import' after 'from ...'")
+                imported_name = self.expect(TokenType.IDENTIFIER, "Expected imported module or name")
+                parts.append(imported_name.value)
+            else:
+                parts.append(p1.value)
+                while self.match(TokenType.DOT):
+                    p = self.expect(TokenType.IDENTIFIER, "Expected identifier after '.' in from import")
+                    parts.append(p.value)
+                self.expect(TokenType.IMPORT, "Expected 'import' after 'from ...'")
+                imported_name = self.expect(TokenType.IDENTIFIER, "Expected imported module or name")
+                parts.append(imported_name.value)
+
+            alias = None
+            if self.match(TokenType.AS):
+                alias_tok = self.expect(TokenType.IDENTIFIER, "Expected alias identifier after 'as'")
+                alias = alias_tok.value
+
+            return ImportStmt(line=tok.line, column=tok.column, module_path=parts, alias=alias, is_python=is_python)
+
+        # tok.type == TokenType.IMPORT
         parts: list[str] = []
         p1 = self.expect(TokenType.IDENTIFIER, "Expected module name in import")
-        if p1.value == "py" and self.match(TokenType.DOT):
+        if p1.value in ("py", "python") and self.match(TokenType.DOT):
             is_python = True
-            p2 = self.expect(TokenType.IDENTIFIER, "Expected python module name after 'py.'")
+            p2 = self.expect(TokenType.IDENTIFIER, "Expected python module name after 'py.' or 'python.'")
             parts.append(p2.value)
         else:
             parts.append(p1.value)

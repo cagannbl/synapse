@@ -253,11 +253,12 @@ class TensorShapeGuard:
 
         elif isinstance(stmt, AssignStmt):
             val_shape = self._infer_expr_shape(stmt.value, errors)
-            if stmt.target in self.env and val_shape:
-                existing_shape = self.env[stmt.target]
+            target_name = stmt.target.name if isinstance(stmt.target, IdentifierExpr) else (stmt.target if isinstance(stmt.target, str) else None)
+            if target_name and target_name in self.env and val_shape:
+                existing_shape = self.env[target_name]
                 if not all(self.solver.are_compatible(e, v) for e, v in zip(existing_shape, val_shape)):
                     err = CompileTimeShapeMismatchError(
-                        message=f"Variable '{stmt.target}' expected shape {existing_shape}, got {val_shape}",
+                        message=f"Variable '{target_name}' expected shape {existing_shape}, got {val_shape}",
                         line=getattr(stmt, "line", 1),
                         column=getattr(stmt, "column", 1),
                         expected=existing_shape,
@@ -265,8 +266,8 @@ class TensorShapeGuard:
                         source_line=self._get_line_text(getattr(stmt, "line", 1)),
                     )
                     errors.append(err)
-            elif val_shape:
-                self.env[stmt.target] = val_shape
+            elif target_name and val_shape:
+                self.env[target_name] = val_shape
 
         elif isinstance(stmt, FunctionDef):
             # Record parameter tensor shapes in function scope
@@ -451,14 +452,31 @@ class TensorShapeGuard:
                 if s1 and s2:
                     is_valid, out_shape, err_msg = self.solver.check_matmul(s1, s2)
                     if not is_valid:
+                        line_no = getattr(expr, "line", 1) or 1
+                        source_line = self._get_line_text(line_no)
+                        suggested = "Transpose tensor with .T" if len(s2) >= 2 else None
+                        diff = None
+                        if "@" in source_line:
+                            fixed_line = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)(\b(?!\.T))", r"\1.T", source_line)
+                            if fixed_line != source_line:
+                                from synapse.core.diagnostics import generate_unified_diff
+                                orig_lines = self.source_text.splitlines(keepends=True)
+                                if 1 <= line_no <= len(orig_lines):
+                                    has_nl = orig_lines[line_no - 1].endswith("\n")
+                                    mod_lines = list(orig_lines)
+                                    mod_lines[line_no - 1] = fixed_line + ("\n" if has_nl else "")
+                                    diff = generate_unified_diff(self.source_text, "".join(mod_lines), filename=self.filename)
                         errors.append(
                             CompileTimeShapeMismatchError(
                                 message=err_msg,
-                                line=getattr(expr, "line", 1),
+                                line=line_no,
                                 column=getattr(expr, "column", 1),
-                                expected=f"Matching inner dimension '{s1[-1]}'",
-                                actual=f"Inner dimension '{s2[-2]}'",
-                                source_line=self._get_line_text(getattr(expr, "line", 1)),
+                                expected=str(s1[-1]),
+                                actual=str(s2[-2]),
+                                source_line=source_line,
+                                suggested_fix=suggested,
+                                diff=diff,
+                                code="SYN-E202",
                             )
                         )
                         return None
@@ -483,21 +501,31 @@ class TensorShapeGuard:
                     is_valid, out_shape, err_msg = self.solver.check_matmul(left_shape, right_shape)
                     if not is_valid:
                         # Check if transposing right solves it
-                        suggested = None
-                        if len(right_shape) >= 2:
-                            transposed_r = right_shape[:-2] + (right_shape[-1], right_shape[-2])
-                            valid_t, _, _ = self.solver.check_matmul(left_shape, transposed_r)
-                            if valid_t:
-                                suggested = "Try transposing the second operand: A @ B.T"
+                        suggested = "Transpose tensor with .T"
+                        diff = None
+                        line_no = getattr(expr, "line", 1) or 1
+                        source_line = self._get_line_text(line_no)
+                        if "@" in source_line:
+                            fixed_line = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)(\b(?!\.T))", r"\1.T", source_line)
+                            if fixed_line != source_line:
+                                from synapse.core.diagnostics import generate_unified_diff
+                                orig_lines = self.source_text.splitlines(keepends=True)
+                                if 1 <= line_no <= len(orig_lines):
+                                    has_nl = orig_lines[line_no - 1].endswith("\n")
+                                    mod_lines = list(orig_lines)
+                                    mod_lines[line_no - 1] = fixed_line + ("\n" if has_nl else "")
+                                    diff = generate_unified_diff(self.source_text, "".join(mod_lines), filename=self.filename)
 
                         err = CompileTimeShapeMismatchError(
                             message=err_msg,
-                            line=getattr(expr, "line", 1),
+                            line=line_no,
                             column=getattr(expr, "column", 1),
-                            expected=f"Matching inner dimension '{left_shape[-1]}'",
-                            actual=f"Inner dimension '{right_shape[-2]}'",
-                            source_line=self._get_line_text(getattr(expr, "line", 1)),
+                            expected=str(left_shape[-1]),
+                            actual=str(right_shape[-2]),
+                            source_line=source_line,
                             suggested_fix=suggested,
+                            diff=diff,
+                            code="SYN-E202",
                         )
                         errors.append(err)
                         return None

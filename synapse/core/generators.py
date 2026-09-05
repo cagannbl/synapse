@@ -175,24 +175,28 @@ class SynapseGenerator(Generic[T, S, R]):
 
         self._state = GeneratorState.RUNNING
         try:
+            if isinstance(typ, BaseException):
+                exc = typ
+            elif isinstance(typ, type) and issubclass(typ, BaseException):
+                if isinstance(val, BaseException):
+                    exc = val
+                elif val is not None:
+                    exc = typ(val)
+                else:
+                    exc = typ()
+            else:
+                exc = RuntimeError(f"Invalid exception: {typ}")
+            if tb is not None:
+                exc = exc.with_traceback(tb)
+
             if hasattr(self._gen, "throw"):
-                val_yielded = self._gen.throw(typ, val, tb)
+                try:
+                    val_yielded = self._gen.throw(exc)
+                except TypeError:
+                    val_yielded = self._gen.throw(typ, val, tb)
                 self._state = GeneratorState.SUSPENDED
                 return val_yielded
             else:
-                if isinstance(typ, BaseException):
-                    exc = typ
-                elif isinstance(typ, type) and issubclass(typ, BaseException):
-                    if isinstance(val, BaseException):
-                        exc = val
-                    elif val is not None:
-                        exc = typ(val)
-                    else:
-                        exc = typ()
-                else:
-                    exc = RuntimeError(f"Invalid exception: {typ}")
-                if tb is not None:
-                    exc = exc.with_traceback(tb)
                 raise exc
         except StopIteration as e:
             self._state = GeneratorState.CLOSED

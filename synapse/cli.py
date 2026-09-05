@@ -36,9 +36,24 @@ def run_file(
     explicit_profile: bool = False,
     compat: Optional[str] = None,
     vm_mode: bool = False,
+    output_format: str = "human",
+    is_agent: bool = False,
 ):
+    use_agentic_json = (output_format == "json") or is_agent
+    from synapse.core.diagnostics import Diagnostic, DiagnosticReport, diagnose_code
+
     if not os.path.isfile(filepath):
-        if json_diagnostics:
+        if use_agentic_json:
+            diag = Diagnostic(
+                file=filepath,
+                line=1,
+                column=1,
+                severity="error",
+                code="SYN-E001",
+                message=f"File not found '{filepath}'",
+            )
+            print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+        elif json_diagnostics:
             import json
             print(json.dumps({"status": "error", "error_type": "FileNotFound", "message": f"File not found '{filepath}'"}))
         else:
@@ -90,7 +105,7 @@ def run_file(
         check_profile_compliance(ast, selected_profile)
 
         # C99 AOT Birincil Motor: Standalone modunda C99 olarak derleyip çalıştır
-        if not vm_mode and selected_profile == CompilationProfile.STANDALONE and not is_python:
+        if not vm_mode and selected_profile == CompilationProfile.STANDALONE and not is_python and not use_agentic_json:
             try:
                 from synapse.codegen.native_compiler import NativeCompiler
                 native_comp = NativeCompiler()
@@ -108,11 +123,36 @@ def run_file(
 
         code = Compiler(name=os.path.basename(filepath), profile=selected_profile).compile(ast)
         vm = VirtualMachine()
-        vm.execute(code)
+        if use_agentic_json:
+            import io
+            from contextlib import redirect_stdout, redirect_stderr
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                vm.execute(code)
+            print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+            sys.exit(0)
+        else:
+            vm.execute(code)
     except Exception as e:
         from synapse.compiler.options import StandaloneViolationError
-        if json_diagnostics:
-            from synapse.core.diagnostics import diagnose_code
+        if use_agentic_json:
+            report = diagnose_code(source, filepath=filepath, error=e)
+            if report.status == "ok":
+                diag = Diagnostic(
+                    file=filepath,
+                    line=1,
+                    column=1,
+                    severity="error",
+                    code="SYN-E001",
+                    message=str(e),
+                )
+                report.status = "error"
+                report.diagnostics.append(diag)
+                report.error_type = type(e).__name__
+                report.message = str(e)
+                report.ai_prompt_hint = f"Runtime execution failed: {e}"
+            print(report.to_json(indent=2))
+            sys.exit(1)
+        elif json_diagnostics:
             report = diagnose_code(source, filepath)
             if report.status == "ok":
                 report.status = "error"
@@ -277,31 +317,40 @@ def run_mcp():
     server.run(transport="stdio")
 
 
-def check_file(filepath: str, as_json: bool = False, type_check: bool = True):
+def check_file(
+    filepath: str,
+    as_json: bool = False,
+    type_check: bool = True,
+    output_format: str = "human",
+    is_agent: bool = False,
+):
+    use_agentic_json = is_agent or (output_format == "json") or as_json
+    from synapse.core.diagnostics import Diagnostic, DiagnosticReport, diagnose_code
+
     if not os.path.isfile(filepath):
-        print(f"Error: File not found '{filepath}'", file=sys.stderr)
+        if use_agentic_json:
+            diag = Diagnostic(
+                file=filepath,
+                line=1,
+                column=1,
+                severity="error",
+                code="SYN-E001",
+                message=f"File not found '{filepath}'",
+            )
+            print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+        else:
+            print(f"Error: File not found '{filepath}'", file=sys.stderr)
         sys.exit(1)
 
     with open(filepath, "r", encoding="utf-8") as f:
         source = f.read()
 
-    from synapse.core.diagnostics import diagnose_code
     report = diagnose_code(source, filepath)
 
-    if as_json:
-        if report.status != "ok":
-            print(report.to_json())
-            sys.exit(1)
-        if type_check:
-            from synapse.core.type_checker import check_source
-            tc_result = check_source(source, filepath=filepath)
-            if not tc_result.is_valid:
-                print(tc_result.errors[0].to_json())
-                sys.exit(1)
-        print(report.to_json())
-        sys.exit(0)
-    else:
-        if report.status != "ok":
+    if report.status != "ok":
+        if use_agentic_json:
+            print(report.to_json(indent=2))
+        else:
             print(f"Check FAILED [{report.error_type}] at line {report.line}:{report.column}")
             if report.source_line:
                 print(f"  > {report.source_line}")
@@ -311,12 +360,32 @@ def check_file(filepath: str, as_json: bool = False, type_check: bool = True):
                 print(f"Suggested fix: {report.suggested_fix}")
             if report.ai_prompt_hint:
                 print(f"AI Hint: {report.ai_prompt_hint}")
-            sys.exit(1)
+        sys.exit(1)
 
-        if type_check:
-            from synapse.core.type_checker import check_source
-            tc_result = check_source(source, filepath=filepath)
-            if not tc_result.is_valid:
+    if type_check:
+        from synapse.core.type_checker import check_source
+        tc_result = check_source(source, filepath=filepath)
+        if not tc_result.is_valid:
+            if use_agentic_json:
+                all_diags = []
+                for err_rep in tc_result.errors:
+                    if err_rep.diagnostics:
+                        all_diags.extend(err_rep.diagnostics)
+                    else:
+                        all_diags.append(Diagnostic(
+                            file=err_rep.file or filepath,
+                            line=err_rep.line or 1,
+                            column=err_rep.column or 1,
+                            severity=err_rep.severity or "error",
+                            code=err_rep.code or "SYN-E201",
+                            message=err_rep.message,
+                            expected=err_rep.expected,
+                            actual=err_rep.actual,
+                            suggested_fix=err_rep.suggested_fix,
+                            diff=err_rep.diff,
+                        ))
+                print(DiagnosticReport(status="error", diagnostics=all_diags).to_json(indent=2))
+            else:
                 err = tc_result.errors[0]
                 print(f"Check FAILED [{err.error_type}] at line {err.line}:{err.column}")
                 if err.source_line:
@@ -325,16 +394,56 @@ def check_file(filepath: str, as_json: bool = False, type_check: bool = True):
                 print(f"Message: {err.message}")
                 if err.suggested_fix:
                     print(f"Suggested fix: {err.suggested_fix}")
-                sys.exit(1)
+            sys.exit(1)
 
+    # Tensor shape static contract check via shape guard
+    from synapse.analyzer.shape_guard import verify_shapes_in_file
+    is_shape_valid, shape_errors = verify_shapes_in_file(filepath)
+    if not is_shape_valid and shape_errors:
+        if use_agentic_json:
+            all_diags = []
+            for se in shape_errors:
+                all_diags.append(Diagnostic(
+                    file=filepath,
+                    line=se.line or 1,
+                    column=se.column or 1,
+                    severity="error",
+                    code=getattr(se, "code", "SYN-E202") or "SYN-E202",
+                    message=se.message,
+                    expected=str(se.expected) if se.expected is not None else None,
+                    actual=str(se.actual) if se.actual is not None else None,
+                    suggested_fix=getattr(se, "suggested_fix", None) or "Transpose tensor with .T",
+                    diff=getattr(se, "diff", None),
+                ))
+            print(DiagnosticReport(status="error", diagnostics=all_diags).to_json(indent=2))
+        else:
+            se = shape_errors[0]
+            print(f"Check FAILED [ShapeMismatch] at line {se.line}:{se.column}")
+            print(f"Message: {se.message}")
+            if getattr(se, "suggested_fix", None):
+                print(f"Suggested fix: {se.suggested_fix}")
+        sys.exit(1)
+
+    if use_agentic_json:
+        print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+    else:
         print(f"Check PASSED: {filepath} is valid Synapse code.")
-        sys.exit(0)
+    sys.exit(0)
 
 
-def run_lint(paths: list[str], as_json: bool = False, strict: bool = False):
+def run_lint(
+    paths: list[str],
+    as_json: bool = False,
+    strict: bool = False,
+    output_format: str = "human",
+    is_agent: bool = False,
+):
+    from synapse.core.diagnostics import Diagnostic, DiagnosticReport
     from synapse.tools.linter import SynapseLinter
     linter = SynapseLinter()
     all_diagnostics = []
+
+    use_agentic = is_agent or (output_format == "json")
 
     if not paths:
         paths = ["."]
@@ -349,7 +458,17 @@ def run_lint(paths: list[str], as_json: bool = False, strict: bool = False):
                     if f.endswith(".syn"):
                         target_files.append(os.path.join(root, f))
         else:
-            if as_json:
+            if use_agentic:
+                diag = Diagnostic(
+                    file=p,
+                    line=1,
+                    column=1,
+                    severity="error",
+                    code="SYN-E001",
+                    message=f"Path not found '{p}'",
+                )
+                print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+            elif as_json:
                 import json
                 print(json.dumps([{"code": "SYN999", "message": f"Path not found '{p}'", "line": 1, "column": 1, "severity": "error", "filename": p}], indent=2))
             else:
@@ -357,7 +476,9 @@ def run_lint(paths: list[str], as_json: bool = False, strict: bool = False):
             sys.exit(1)
 
     if not target_files:
-        if as_json:
+        if use_agentic:
+            print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+        elif as_json:
             print("[]")
         else:
             print("No .syn files found to lint.")
@@ -367,13 +488,31 @@ def run_lint(paths: list[str], as_json: bool = False, strict: bool = False):
         diags = linter.lint_file(filepath)
         all_diagnostics.extend(diags)
 
-    report = linter.format_report(all_diagnostics, as_json=as_json)
-    print(report)
-
-    has_errors = any(d.severity == "error" for d in all_diagnostics)
-    if strict and all_diagnostics:
-        sys.exit(1)
-    sys.exit(1 if has_errors else 0)
+    if use_agentic:
+        diags = []
+        for d in all_diagnostics:
+            diags.append(Diagnostic(
+                file=d.filename,
+                line=d.line,
+                column=d.column,
+                severity=d.severity,
+                code=d.code,
+                message=d.message,
+            ))
+        has_errors = any(d.severity == "error" for d in all_diagnostics)
+        status = "error" if has_errors or (strict and all_diagnostics) else "ok"
+        report = DiagnosticReport(status=status, diagnostics=diags)
+        print(report.to_json(indent=2))
+        if strict and all_diagnostics:
+            sys.exit(1)
+        sys.exit(1 if has_errors else 0)
+    else:
+        report = linter.format_report(all_diagnostics, as_json=as_json)
+        print(report)
+        has_errors = any(d.severity == "error" for d in all_diagnostics)
+        if strict and all_diagnostics:
+            sys.exit(1)
+        sys.exit(1 if has_errors else 0)
 
 
 def show_ast(filepath: str):
@@ -466,6 +605,8 @@ def main():
     run_parser.add_argument("--mode", choices=["strict", "tolerant"], default="strict", help="Compilation mode: 'strict' (default) or 'tolerant'")
     run_parser.add_argument("--compat", choices=["synapse", "python"], default="synapse", help="Language compatibility mode: 'synapse' (default) or 'python' (.py direct execution)")
     run_parser.add_argument("--vm", action="store_true", help="Force execution using Bytecode VM instead of C99 AOT")
+    run_parser.add_argument("--format", choices=["human", "json"], default="human", help="Output format: 'human' (default) or 'json'")
+    run_parser.add_argument("--agent", action="store_true", help="Output structured agentic diagnostics JSON format for autonomous LLM agents")
 
     # Test
     test_parser = subparsers.add_parser('test', help='Run Synapse test suite (.syn test files)', description='Run Synapse test suite (.syn test files)')
@@ -496,12 +637,16 @@ def main():
     check_parser = subparsers.add_parser("check", help="Validate Synapse code syntax and produce diagnostic report")
     check_parser.add_argument("file", help="Path to Synapse file")
     check_parser.add_argument("--json", action="store_true", help="Output diagnostic report in JSON format")
+    check_parser.add_argument("--format", choices=["human", "json"], default="human", help="Output format: 'human' (default) or 'json'")
+    check_parser.add_argument("--agent", action="store_true", help="Output structured agentic diagnostics JSON format for autonomous LLM agents")
 
     # Lint (Synapse Linter & Static Analysis)
     lint_parser = subparsers.add_parser("lint", help="Lint Synapse source files for warnings and syntax issues")
     lint_parser.add_argument("paths", nargs="*", default=["."], help="Files or directories to lint (default: current directory)")
     lint_parser.add_argument("--json", action="store_true", help="Output diagnostic report in JSON format")
     lint_parser.add_argument("--strict", action="store_true", help="Treat warnings as errors (exit non-zero on any issues)")
+    lint_parser.add_argument("--format", choices=["human", "json"], default="human", help="Output format: 'human' (default) or 'json'")
+    lint_parser.add_argument("--agent", action="store_true", help="Output structured agentic diagnostics JSON format for autonomous LLM agents")
 
     # Prompt Hint (<250 token AI specification)
     subparsers.add_parser("prompt-hint", help="Display ultra-dense token-optimized system prompt for AI code generators")
@@ -541,6 +686,8 @@ def main():
     build_parser.add_argument("--node", action="store_true", help="Generate companion Node.js test runner when targeting wasm")
     build_parser.add_argument("--profile", choices=["standalone", "hybrid"], default="standalone", help="Compilation profile: 'standalone' (pure Synapse, default) or 'hybrid' (Python interop allowed)")
     build_parser.add_argument("--mode", choices=["strict", "tolerant"], default="strict", help="Compilation mode: 'strict' (default) or 'tolerant'")
+    build_parser.add_argument("--format", choices=["human", "json"], default="human", help="Output format: 'human' (default) or 'json'")
+    build_parser.add_argument("--agent", action="store_true", help="Output structured agentic diagnostics JSON format for autonomous LLM agents")
 
     # LSP (Language Server Protocol)
     subparsers.add_parser("lsp", help="Start Synapse LSP server over stdio for IDE integration")
@@ -638,6 +785,8 @@ def main():
             explicit_profile=_is_flag_explicit("--profile"),
             compat=getattr(args, "compat", "synapse"),
             vm_mode=getattr(args, "vm", False),
+            output_format=getattr(args, "format", "human"),
+            is_agent=getattr(args, "agent", False),
         )
     elif args.command == "clean":
         from synapse.compiler.cache import ASTCache
@@ -708,9 +857,20 @@ def main():
     elif args.command == "mcp":
         run_mcp()
     elif args.command == "check":
-        check_file(args.file, as_json=args.json)
+        check_file(
+            args.file,
+            as_json=args.json,
+            output_format=getattr(args, "format", "human"),
+            is_agent=getattr(args, "agent", False),
+        )
     elif args.command == "lint":
-        run_lint(args.paths, as_json=args.json, strict=getattr(args, "strict", False))
+        run_lint(
+            args.paths,
+            as_json=args.json,
+            strict=getattr(args, "strict", False),
+            output_format=getattr(args, "format", "human"),
+            is_agent=getattr(args, "agent", False),
+        )
     elif args.command == "ast":
         show_ast(args.file)
     elif args.command == "dis":
@@ -738,8 +898,24 @@ def main():
         nc.transpile_pyext_file(args.file, out_path, module_name=getattr(args, "module_name", None))
         print(f"Python C-Extension source emitted: {args.file} -> {out_path}")
     elif args.command == "build":
+        out_fmt = getattr(args, "format", "human") or "human"
+        is_agent = getattr(args, "agent", False)
+        use_agentic_json = is_agent or (out_fmt == "json")
+        from synapse.core.diagnostics import Diagnostic, DiagnosticReport, diagnose_code
+
         if not os.path.isfile(args.file):
-            print(f"Error: File not found '{args.file}'", file=sys.stderr)
+            if use_agentic_json:
+                diag = Diagnostic(
+                    file=args.file,
+                    line=1,
+                    column=1,
+                    severity="error",
+                    code="SYN-E001",
+                    message=f"File not found '{args.file}'",
+                )
+                print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+            else:
+                print(f"Error: File not found '{args.file}'", file=sys.stderr)
             sys.exit(1)
 
         with open(args.file, "r", encoding="utf-8") as f:
@@ -780,13 +956,38 @@ def main():
 
             check_profile_compliance(ast, selected_profile)
         except StandaloneViolationError as e:
-            print(f"\n[Profile Error] {e}", file=sys.stderr)
+            if use_agentic_json:
+                diag = Diagnostic(
+                    file=args.file,
+                    line=1,
+                    column=1,
+                    severity="error",
+                    code="SYN-E401",
+                    message=str(e),
+                )
+                print(DiagnosticReport(status="error", diagnostics=[diag], file=args.file, error_type="StandaloneViolationError", message=str(e)).to_json(indent=2))
+            else:
+                print(f"\n[Profile Error] {e}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:
-            if isinstance(e, (LexerError, ParseError)):
-                print(f"\n[Syntax Error] {e}", file=sys.stderr)
+            if use_agentic_json:
+                report = diagnose_code(source, filepath=args.file, error=e)
+                if report.status == "ok":
+                    diag = Diagnostic(
+                        file=args.file,
+                        line=1,
+                        column=1,
+                        severity="error",
+                        code="SYN-E101",
+                        message=str(e),
+                    )
+                    report = DiagnosticReport(status="error", diagnostics=[diag], file=args.file, error_type=type(e).__name__, message=str(e))
+                print(report.to_json(indent=2))
             else:
-                print(f"\n[Build Error] {e}", file=sys.stderr)
+                if isinstance(e, (LexerError, ParseError)):
+                    print(f"\n[Syntax Error] {e}", file=sys.stderr)
+                else:
+                    print(f"\n[Build Error] {e}", file=sys.stderr)
             sys.exit(1)
 
         target = getattr(args, "target", "native") or "native"
@@ -803,7 +1004,10 @@ def main():
                 f.write(c_code)
 
             if getattr(args, "c_only", False):
-                print(f"C source emitted: {c_path}")
+                if use_agentic_json:
+                    print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+                else:
+                    print(f"C source emitted: {c_path}")
             else:
                 emit_html = getattr(args, "html", False)
                 emit_node = getattr(args, "node", False)
@@ -814,13 +1018,28 @@ def main():
                     emit_node=emit_node,
                 )
                 if result.success:
-                    print(f"WASM build succeeded: {result.wasm_path} and {result.js_path}")
-                    if result.html_path:
-                        print(f"HTML harness generated: {result.html_path}")
-                    if result.node_runner_path:
-                        print(f"Node runner generated: {result.node_runner_path}")
+                    if use_agentic_json:
+                        print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+                    else:
+                        print(f"WASM build succeeded: {result.wasm_path} and {result.js_path}")
+                        if result.html_path:
+                            print(f"HTML harness generated: {result.html_path}")
+                        if result.node_runner_path:
+                            print(f"Node runner generated: {result.node_runner_path}")
                 else:
-                    print(f"Build notice: {result.error_message}")
+                    if use_agentic_json:
+                        diag = Diagnostic(
+                            file=args.file,
+                            line=1,
+                            column=1,
+                            severity="error",
+                            code="SYN-E301",
+                            message=f"WASM build failed: {result.error_message}",
+                        )
+                        print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+                        sys.exit(1)
+                    else:
+                        print(f"Build notice: {result.error_message}")
         else:
             from synapse.codegen.native_compiler import NativeCompiler
             nc = NativeCompiler()
@@ -834,13 +1053,31 @@ def main():
                 f.write(c_code)
 
             if getattr(args, "c_only", False):
-                print(f"C source emitted: {c_path}")
+                if use_agentic_json:
+                    print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+                else:
+                    print(f"C source emitted: {c_path}")
             else:
                 success, msg = nc.build_executable(c_path, out_exe)
                 if success:
-                    print(f"Build succeeded: {out_exe}")
+                    if use_agentic_json:
+                        print(DiagnosticReport(status="ok", diagnostics=[]).to_json(indent=2))
+                    else:
+                        print(f"Build succeeded: {out_exe}")
                 else:
-                    print(f"Build notice: {msg}")
+                    if use_agentic_json:
+                        diag = Diagnostic(
+                            file=args.file,
+                            line=1,
+                            column=1,
+                            severity="error",
+                            code="SYN-E301",
+                            message=f"Build failed: {msg}",
+                        )
+                        print(DiagnosticReport(status="error", diagnostics=[diag]).to_json(indent=2))
+                        sys.exit(1)
+                    else:
+                        print(f"Build notice: {msg}")
     elif args.command == "lsp":
         from synapse.lsp.server import LSPServer
         LSPServer().start()

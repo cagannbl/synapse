@@ -31,12 +31,28 @@ Write-Host "======================================================" -ForegroundC
 $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if (-not $pythonCmd) {
     $pythonCmd = Get-Command py -ErrorAction SilentlyContinue
-    if (-not $pythonCmd) {
-        Write-Error "Hata: Python 3.10+ kurulu bulunamadi. Lutfen Python yukleyip tekrar deneyin."
-        exit 1
+}
+if (-not $pythonCmd) {
+    $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python3*\python.exe",
+        "$env:ProgramFiles\Python3*\python.exe",
+        "${env:ProgramFiles(x86)}\Python3*\python.exe",
+        "$env:SystemDrive\Python3*\python.exe"
+    )
+    foreach ($cand in $candidates) {
+        $found = Get-Item $cand -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+            $pythonCmd = [PSCustomObject]@{ Source = $found.FullName }
+            break
+        }
     }
 }
-Write-Host "[1/5] Python calisma ortami tespit edildi: $($pythonCmd.Source)" -ForegroundColor Green
+if (-not $pythonCmd) {
+    Write-Error "Hata: Python 3.10+ kurulu bulunamadi. Lutfen Python yukleyip tekrar deneyin."
+    exit 1
+}
+$pythonExe = $pythonCmd.Source
+Write-Host "[1/5] Python calisma ortami tespit edildi: $pythonExe" -ForegroundColor Green
 
 # 2. Determine paths
 if (-not $SourceDir) {

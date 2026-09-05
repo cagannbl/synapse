@@ -108,7 +108,7 @@ class Tensor:
         else:
             target_dtype = np.float64
         if isinstance(data, np.ndarray):
-            self.data = data.astype(target_dtype)
+            self.data = data.astype(target_dtype, copy=False)
         elif isinstance(data, (int, float)):
             self.data = np.array(data, dtype=target_dtype)
         elif isinstance(data, (list, tuple)):
@@ -677,6 +677,29 @@ class Tensor:
     def dequantize(self) -> Tensor:
         """Dequantizes tensor. Returns self for unquantized tensors."""
         return self
+
+    def __dlpack__(self, stream=None, max_version=None, dl_device=None, copy=None):
+        """PEP 652 DLPack export protocol."""
+        from synapse.interop.dlpack import to_dlpack
+        return to_dlpack(self, stream=stream, max_version=max_version, dl_device=dl_device, copy=copy)
+
+    def __dlpack_device__(self):
+        """PEP 652 DLPack device inquiry protocol: returns (device_type, device_id)."""
+        from synapse.interop.dlpack import DLDeviceType
+        dev_type = DLDeviceType.kDLCUDA if self.device.device_type == "cuda" else DLDeviceType.kDLCPU
+        dev_id = getattr(self.device, "index", 0) or 0
+        return (dev_type, dev_id)
+
+    def to_dlpack(self, stream=None, max_version=None, dl_device=None, copy=None):
+        """Exports Tensor as a DLPack PyCapsule."""
+        from synapse.interop.dlpack import to_dlpack
+        return to_dlpack(self, stream=stream, max_version=max_version, dl_device=dl_device, copy=copy)
+
+    @staticmethod
+    def from_dlpack(obj: Any, requires_grad: bool = False) -> Tensor:
+        """Imports a DLPack-compatible tensor or PyCapsule as a Synapse Tensor zero-copy."""
+        from synapse.interop.dlpack import from_dlpack
+        return from_dlpack(obj, requires_grad=requires_grad)
 
     def __repr__(self) -> str:
         req = ", requires_grad=True" if self.requires_grad else ""

@@ -30,25 +30,149 @@ class TypeContractViolationError(Exception):
 
 
 @dataclass
-class DiagnosticReport:
-    status: str = "ok"                          # "ok" | "error"
-    error_type: Optional[str] = None           # "LexerError" | "ParseError" | "MissingDeclaration" | etc.
+class Diagnostic:
+    file: str = ""
+    line: int = 1
+    column: int = 1
+    severity: str = "error"  # "error" | "warning"
+    code: str = "SYN-E101"   # e.g., "SYN-E101", "SYN-E201", "SYN-E202"
     message: str = ""
-    line: int = 0
-    column: int = 0
-    source_line: str = ""
-    pointer: str = ""
+    expected: Optional[str] = None
+    actual: Optional[str] = None
     suggested_fix: Optional[str] = None
-    ai_prompt_hint: Optional[str] = None
     diff: Optional[str] = None
-    auto_fixed_code: Optional[str] = None
-    details: dict[str, Any] = field(default_factory=dict)
+    source_line: Optional[str] = None
+    pointer: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return {
+            "file": self.file,
+            "line": self.line,
+            "column": self.column,
+            "severity": self.severity,
+            "code": self.code,
+            "message": self.message,
+            "expected": self.expected,
+            "actual": self.actual,
+            "suggested_fix": self.suggested_fix,
+            "diff": self.diff,
+        }
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+
+
+@dataclass
+class DiagnosticReport:
+    status: str = "ok"                          # "ok" | "error"
+    diagnostics: list[Diagnostic] = field(default_factory=list)
+    file: str = ""
+    line: int = 0
+    column: int = 0
+    severity: str = "error"
+    code: str = "SYN-E101"
+    message: str = ""
+    expected: Optional[str] = None
+    actual: Optional[str] = None
+    suggested_fix: Optional[str] = None
+    diff: Optional[str] = None
+    error_type: Optional[str] = None           # "LexerError" | "ParseError" | "MissingDeclaration" | etc.
+    source_line: str = ""
+    pointer: str = ""
+    ai_prompt_hint: Optional[str] = None
+    auto_fixed_code: Optional[str] = None
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.diagnostics:
+            first = self.diagnostics[0]
+            if not self.file:
+                super().__setattr__("file", first.file)
+            if not self.line:
+                super().__setattr__("line", first.line)
+            if not self.column:
+                super().__setattr__("column", first.column)
+            if not self.severity:
+                super().__setattr__("severity", first.severity)
+            if not self.code or self.code == "SYN-E101":
+                super().__setattr__("code", first.code)
+            if not self.message:
+                super().__setattr__("message", first.message)
+            if self.expected is None:
+                super().__setattr__("expected", first.expected)
+            if self.actual is None:
+                super().__setattr__("actual", first.actual)
+            if self.suggested_fix is None:
+                super().__setattr__("suggested_fix", first.suggested_fix)
+            if self.diff is None:
+                super().__setattr__("diff", first.diff)
+        elif self.status == "error":
+            d_file = self.file or (self.details.get("filepath", "") if self.details else "") or "<source>"
+            diag = Diagnostic(
+                file=d_file,
+                line=self.line or 1,
+                column=self.column or 1,
+                severity=self.severity or "error",
+                code=self.code or "SYN-E101",
+                message=self.message,
+                expected=self.expected,
+                actual=self.actual,
+                suggested_fix=self.suggested_fix,
+                diff=self.diff,
+                source_line=self.source_line,
+                pointer=self.pointer,
+            )
+            self.diagnostics.append(diag)
+            if not self.file:
+                super().__setattr__("file", d_file)
+        super().__setattr__("_initialized", True)
+
+    def __setattr__(self, name: str, value: Any):
+        super().__setattr__(name, value)
+        if self.__dict__.get("_initialized"):
+            if name in ("file", "line", "column", "severity", "code", "message", "expected", "actual", "suggested_fix", "diff"):
+                diags = self.__dict__.get("diagnostics")
+                if diags and len(diags) > 0:
+                    setattr(diags[0], name, value)
+
+    def add_diagnostic(self, diag: Diagnostic):
+        self.diagnostics.append(diag)
+        if diag.severity == "error":
+            self.status = "error"
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "status": self.status,
+            "diagnostics": [d.to_dict() for d in self.diagnostics],
+        }
+        for k in (
+            "file", "line", "column", "severity", "code", "message",
+            "expected", "actual", "suggested_fix", "diff", "error_type",
+            "source_line", "pointer", "ai_prompt_hint", "auto_fixed_code"
+        ):
+            val = getattr(self, k, None)
+            if val is not None and val != "":
+                d[k] = val
+        if self.details:
+            d["details"] = self.details
+        return d
+
+    def to_json(self, indent: int = 2) -> str:
+        return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+
+    def __getitem__(self, key: str) -> Any:
+        d = self.to_dict()
+        if key in d:
+            return d[key]
+        if hasattr(self, key):
+            return getattr(self, key)
+        raise KeyError(key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
 
 def generate_unified_diff(original: str, modified: str, filename: str = "source.syn") -> str:
@@ -454,22 +578,69 @@ def diagnose_runtime_error(
         details["exception_class"] = type(error).__name__
 
     suggested_fix = None
+    diff = None
+    expected = None
+    actual = None
+    code = "SYN-E401"
     if _is_tensor_shape_mismatch(error, source):
+        code = "SYN-E202"
         ai_prompt_hint = "Tensor shape mismatch in matrix multiplication (@). Verify tensor dimensions and use transpose (.T) or reshape so inner dimensions align."
+        suggested_fix = "Transpose tensor with .T"
+        # Parse expected/actual from error message
+        m_dim = re.search(r"(\d+)\s*!=\s*(\d+)", message)
+        if m_dim:
+            expected = m_dim.group(1)
+            actual = m_dim.group(2)
+        else:
+            m_shapes = re.findall(r"\(\s*(\d+)\s*,\s*(\d+)\s*\)", message)
+            if len(m_shapes) >= 2:
+                expected = m_shapes[0][1]
+                actual = m_shapes[1][0]
+
         if "@" in source_line:
-            suggested_fix = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)", r"\1.T", source_line).strip()
+            pattern = r"(@\s*[A-Za-z_][A-Za-z0-9_]*)(\b(?!\.T))"
+            if re.search(pattern, source_line):
+                fixed_line = re.sub(pattern, r"\1.T", source_line)
+                lines = source.splitlines(keepends=True)
+                if 1 <= line_no <= len(lines):
+                    has_nl = lines[line_no - 1].endswith("\n")
+                    mod_lines = list(lines)
+                    mod_lines[line_no - 1] = fixed_line if (has_nl and fixed_line.endswith("\n")) else (fixed_line + ("\n" if has_nl else ""))
+                    diff = generate_unified_diff(source, "".join(mod_lines), filename=filepath)
     else:
         ai_prompt_hint = f"Runtime execution failed: {message}"
 
-    return DiagnosticReport(
-        status="error",
-        error_type=err_type,
-        message=message,
+    diag = Diagnostic(
+        file=filepath,
         line=line_no,
         column=col_no,
+        severity="error",
+        code=code,
+        message=message,
+        expected=expected,
+        actual=actual,
+        suggested_fix=suggested_fix,
+        diff=diff,
         source_line=source_line,
         pointer=pointer,
+    )
+
+    return DiagnosticReport(
+        status="error",
+        diagnostics=[diag],
+        file=filepath,
+        line=line_no,
+        column=col_no,
+        severity="error",
+        code=code,
+        message=message,
+        expected=expected,
+        actual=actual,
         suggested_fix=suggested_fix,
+        diff=diff,
+        error_type=err_type,
+        source_line=source_line,
+        pointer=pointer,
         ai_prompt_hint=ai_prompt_hint,
         details=details,
     )
@@ -827,12 +998,34 @@ def _check_static_tensor_shapes(ast_root: Any, source: str, filepath: str) -> Op
                 f"Type contract violation: Variable '{var_name}' declared with contract {tt} "
                 f"(shape {decl_shape}) but assigned expression of shape {val_shape}."
             )
-            return DiagnosticReport(
-                status="error",
-                error_type="TypeContractViolationError",
-                message=msg,
+            diag = Diagnostic(
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code="SYN-E201",
+                message=msg,
+                expected=str(decl_shape),
+                actual=str(val_shape),
+                suggested_fix=f"Adjust assigned expression dimensions or update '{var_name}' type annotation to match {val_shape}.",
+                diff=None,
+                source_line=source_line,
+                pointer=pointer,
+            )
+            return DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code="SYN-E201",
+                message=msg,
+                expected=str(decl_shape),
+                actual=str(val_shape),
+                suggested_fix=diag.suggested_fix,
+                diff=None,
+                error_type="TypeContractViolationError",
                 source_line=source_line,
                 pointer=pointer,
                 ai_prompt_hint=f"Adjust assigned expression dimensions or update '{var_name}' type annotation to match {val_shape}.",
@@ -852,12 +1045,34 @@ def _check_static_tensor_shapes(ast_root: Any, source: str, filepath: str) -> Op
                 f"Type contract violation: Reassignment to variable '{var_name}' with declared contract {tt} "
                 f"(shape {decl_shape}) but assigned expression of shape {val_shape}."
             )
-            return DiagnosticReport(
-                status="error",
-                error_type="TypeContractViolationError",
-                message=msg,
+            diag = Diagnostic(
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code="SYN-E201",
+                message=msg,
+                expected=str(decl_shape),
+                actual=str(val_shape),
+                suggested_fix=f"Ensure value assigned to '{var_name}' conforms to declared shape {decl_shape}.",
+                diff=None,
+                source_line=source_line,
+                pointer=pointer,
+            )
+            return DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code="SYN-E201",
+                message=msg,
+                expected=str(decl_shape),
+                actual=str(val_shape),
+                suggested_fix=diag.suggested_fix,
+                diff=None,
+                error_type="TypeContractViolationError",
                 source_line=source_line,
                 pointer=pointer,
                 ai_prompt_hint=f"Ensure value assigned to '{var_name}' conforms to declared shape {decl_shape}.",
@@ -877,25 +1092,62 @@ def _check_static_tensor_shapes(ast_root: Any, source: str, filepath: str) -> Op
             pointer = _generate_pointer(col_no)
 
             msg = f"Cannot multiply tensor of shape {s1} with tensor of shape {s2}. Inner dimensions must match: {s1[-1]} != {s2[-2]}."
-            suggested_fix = None
-            if len(s2) >= 2 and s1[-1] == s2[-1]:
-                if "@" in source_line:
-                    suggested_fix = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)", r"\1.T", source_line).strip()
-            elif len(s1) >= 2 and s1[-2] == s2[-2]:
-                if "@" in source_line:
-                    suggested_fix = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)(\s*@)", r"\1.T\2", source_line).strip()
-            elif "@" in source_line:
-                suggested_fix = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)", r"\1.T", source_line).strip()
+            suggested_fix = "Transpose tensor with .T"
+            diff = None
+
+            # Generate unified diff for transposition fix
+            lines = source.splitlines(keepends=True)
+            if 1 <= line_no <= len(lines):
+                cur_line = lines[line_no - 1]
+                has_nl = cur_line.endswith("\n")
+                fixed_line = None
+                if len(s2) >= 2 and s1[-1] == s2[-1]:
+                    fixed_line = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)(\b(?!\.T))", r"\1.T", cur_line)
+                elif len(s1) >= 2 and s1[-2] == s2[-2]:
+                    fixed_line = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)(\s*@)(?!\.T)", r"\1.T\2", cur_line)
+                elif "@" in cur_line:
+                    fixed_line = re.sub(r"(@\s*[A-Za-z_][A-Za-z0-9_]*)(\b(?!\.T))", r"\1.T", cur_line)
+
+                if fixed_line and fixed_line != cur_line:
+                    suggested_fix = fixed_line.strip()
+                    mod_lines = list(lines)
+                    mod_lines[line_no - 1] = fixed_line if (has_nl and fixed_line.endswith("\n")) else (fixed_line + ("\n" if has_nl else ""))
+                    diff = generate_unified_diff(source, "".join(mod_lines), filename=filepath)
+
+            expected_dim = str(s1[-1])
+            actual_dim = str(s2[-2])
+
+            diag = Diagnostic(
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=expected_dim,
+                actual=actual_dim,
+                suggested_fix=suggested_fix,
+                diff=diff,
+                source_line=source_line,
+                pointer=pointer,
+            )
 
             return DiagnosticReport(
                 status="error",
-                error_type="TensorShapeMismatchError",
-                message=msg,
+                diagnostics=[diag],
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=expected_dim,
+                actual=actual_dim,
+                suggested_fix=suggested_fix,
+                diff=diff,
+                error_type="TensorShapeMismatchError",
                 source_line=source_line,
                 pointer=pointer,
-                suggested_fix=suggested_fix,
                 ai_prompt_hint="Tensor shape mismatch in matrix multiplication (@). Verify tensor dimensions and use transpose (.T) or reshape so inner dimensions align.",
                 details={"filepath": filepath, "left_shape": list(s1), "right_shape": list(s2)}
             )
@@ -905,17 +1157,49 @@ def _check_static_tensor_shapes(ast_root: Any, source: str, filepath: str) -> Op
             pointer = _generate_pointer(col_no)
             msg = f"Cannot perform elementwise '{op}' on tensor of shape {s1} and tensor of shape {s2}. Shapes are not broadcast-compatible."
             suggested_fix = None
+            diff = None
             if len(s1) == 2 and len(s2) == 2 and s1 == s2[::-1]:
-                suggested_fix = re.sub(rf"(\+\s*[A-Za-z_][A-Za-z0-9_]*)", r"\1.T", source_line).strip()
-            return DiagnosticReport(
-                status="error",
-                error_type="TensorShapeMismatchError",
-                message=msg,
+                suggested_fix = "Transpose tensor with .T"
+                lines = source.splitlines(keepends=True)
+                if 1 <= line_no <= len(lines):
+                    cur_line = lines[line_no - 1]
+                    has_nl = cur_line.endswith("\n")
+                    fixed_line = re.sub(rf"(\+\s*[A-Za-z_][A-Za-z0-9_]*)", r"\1.T", cur_line)
+                    if fixed_line != cur_line:
+                        mod_lines = list(lines)
+                        mod_lines[line_no - 1] = fixed_line if (has_nl and fixed_line.endswith("\n")) else (fixed_line + ("\n" if has_nl else ""))
+                        diff = generate_unified_diff(source, "".join(mod_lines), filename=filepath)
+
+            diag = Diagnostic(
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=str(s1),
+                actual=str(s2),
+                suggested_fix=suggested_fix,
+                diff=diff,
                 source_line=source_line,
                 pointer=pointer,
+            )
+            return DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=str(s1),
+                actual=str(s2),
                 suggested_fix=suggested_fix,
+                diff=diff,
+                error_type="TensorShapeMismatchError",
+                source_line=source_line,
+                pointer=pointer,
                 ai_prompt_hint=f"Elementwise '{op}' requires tensors to be broadcast-compatible.",
                 details={"filepath": filepath, "left_shape": list(s1), "right_shape": list(s2), "op": op}
             )
@@ -924,12 +1208,34 @@ def _check_static_tensor_shapes(ast_root: Any, source: str, filepath: str) -> Op
             _, s = mismatch_info
             pointer = _generate_pointer(col_no)
             msg = f"Cannot transpose tensor of shape {s}. Transposition requires at least 2 dimensions."
-            return DiagnosticReport(
-                status="error",
-                error_type="TensorShapeMismatchError",
-                message=msg,
+            diag = Diagnostic(
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=">= 2 dimensions",
+                actual=f"{len(s)} dimension(s)",
+                suggested_fix=None,
+                diff=None,
+                source_line=source_line,
+                pointer=pointer,
+            )
+            return DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code="SYN-E202",
+                message=msg,
+                expected=diag.expected,
+                actual=diag.actual,
+                suggested_fix=None,
+                diff=None,
+                error_type="TensorShapeMismatchError",
                 source_line=source_line,
                 pointer=pointer,
                 ai_prompt_hint="Transpose (.T) is only valid on tensors with at least 2 dimensions.",
@@ -971,15 +1277,36 @@ def diagnose_code(
             elif "Unterminated string" in str(e):
                 hint = "Close open quotation marks before newline or end of file."
 
-            report = DiagnosticReport(
-                status="error",
-                error_type="LexerError",
-                message=str(e),
+            diag = Diagnostic(
+                file=filepath,
                 line=e.line,
                 column=e.column,
+                severity="error",
+                code="SYN-E101",
+                message=str(e),
+                expected=None,
+                actual=None,
+                suggested_fix=fix,
+                diff=None,
                 source_line=line_str,
                 pointer=pointer,
+            )
+            report = DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=e.line,
+                column=e.column,
+                severity="error",
+                code="SYN-E101",
+                message=str(e),
+                expected=None,
+                actual=None,
                 suggested_fix=fix,
+                diff=None,
+                error_type="LexerError",
+                source_line=line_str,
+                pointer=pointer,
                 ai_prompt_hint=hint,
                 details={"filepath": filepath}
             )
@@ -993,15 +1320,36 @@ def diagnose_code(
             pointer = _generate_pointer(e.token.column)
             fix, hint = _suggest_fix_for_parse_error(str(e), e.token.value, line_str)
 
-            report = DiagnosticReport(
-                status="error",
-                error_type="ParseError",
-                message=str(e),
+            diag = Diagnostic(
+                file=filepath,
                 line=e.token.line,
                 column=e.token.column,
+                severity="error",
+                code="SYN-E102",
+                message=str(e),
+                expected=None,
+                actual=str(e.token.value) if hasattr(e.token, "value") else None,
+                suggested_fix=fix,
+                diff=None,
                 source_line=line_str,
                 pointer=pointer,
+            )
+            report = DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=e.token.line,
+                column=e.token.column,
+                severity="error",
+                code="SYN-E102",
+                message=str(e),
+                expected=None,
+                actual=diag.actual,
                 suggested_fix=fix,
+                diff=None,
+                error_type="ParseError",
+                source_line=line_str,
+                pointer=pointer,
                 ai_prompt_hint=hint,
                 details={"filepath": filepath, "token_type": e.token.type.name, "token_val": str(e.token.value)}
             )
@@ -1027,15 +1375,38 @@ def diagnose_code(
             line_no, col_no = _resolve_error_location(e, source, line=line, column=column, filepath=filepath)
             source_line = _extract_source_line(source, line_no)
             pointer = _generate_pointer(col_no)
-            report = DiagnosticReport(
-                status="error",
-                error_type=type(e).__name__,
-                message=err_msg,
+            c_code = "SYN-E202" if is_shape_mismatch else "SYN-E301"
+            c_fix = "Transpose tensor with .T" if is_shape_mismatch else None
+            diag = Diagnostic(
+                file=filepath,
                 line=line_no,
                 column=col_no,
+                severity="error",
+                code=c_code,
+                message=err_msg,
+                expected=None,
+                actual=None,
+                suggested_fix=c_fix,
+                diff=None,
                 source_line=source_line,
                 pointer=pointer,
-                suggested_fix=None,
+            )
+            report = DiagnosticReport(
+                status="error",
+                diagnostics=[diag],
+                file=filepath,
+                line=line_no,
+                column=col_no,
+                severity="error",
+                code=c_code,
+                message=err_msg,
+                expected=None,
+                actual=None,
+                suggested_fix=c_fix,
+                diff=None,
+                error_type=type(e).__name__,
+                source_line=source_line,
+                pointer=pointer,
                 ai_prompt_hint=ai_hint,
                 details={"filepath": filepath}
             )
@@ -1051,6 +1422,8 @@ def diagnose_code(
     if report is None:
         report = DiagnosticReport(
             status="ok",
+            diagnostics=[],
+            file=filepath,
             message="Code syntax and AST verified successfully. Ready for execution.",
             auto_fixed_code=source,
             details={"filepath": filepath}
@@ -1059,12 +1432,13 @@ def diagnose_code(
     # Hata durumunda self-healing diff & auto_fixed_code ekle
     if include_diff and report.status == "error":
         try:
-            fixed_code, diff, _ = fix_ai_drift(source, filename=filepath)
-            if diff:
-                report.diff = diff
-                report.auto_fixed_code = fixed_code
+            if not report.diff:
+                fixed_code, diff, _ = fix_ai_drift(source, filename=filepath)
+                if diff:
+                    report.diff = diff
+                    report.auto_fixed_code = fixed_code
             elif not report.auto_fixed_code:
-                report.diff = diff
+                fixed_code, _, _ = fix_ai_drift(source, filename=filepath)
                 report.auto_fixed_code = fixed_code
         except Exception:
             pass
@@ -1123,6 +1497,8 @@ def heal_and_execute(
 
         success_report = DiagnosticReport(
             status="ok",
+            diagnostics=[],
+            file=filename,
             message="Code healed and executed successfully." if (fixed_code != source_code) else "Code executed successfully.",
             diff=diff if (fixed_code != source_code) else None,
             auto_fixed_code=fixed_code,

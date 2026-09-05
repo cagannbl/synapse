@@ -15,32 +15,45 @@ class SynapseInteropError(Exception):
 
 
 def to_synapse_tensor(obj: Any, requires_grad: bool = False) -> Tensor:
-    """Python/NumPy/PyTorch tensörünü doğrudan Synapse Tensor nesnesine çevirir."""
+    """Converts a Python/NumPy/PyTorch tensor to a Synapse Tensor via zero-copy DLPack.
+
+    Prioritizes the PEP 652 DLPack C-ABI standard (__dlpack__) to achieve zero-copy memory sharing.
+    Falls back gracefully to NumPy array buffer sharing if DLPack is unavailable.
+    """
     if isinstance(obj, Tensor):
         return obj
 
-    # DLPack sıfır-kopyalı interop denemesi
+    # 1. DLPack zero-copy interop (PEP 652 primary protocol)
     if hasattr(obj, "__dlpack__") or type(obj).__name__ == "PyCapsule":
         try:
             from synapse.interop.dlpack import from_dlpack, is_dlpack_available
             if is_dlpack_available():
                 return from_dlpack(obj, requires_grad=requires_grad)
         except Exception:
-            # Graceful fallback: DLPack başarısız olursa standart dönüştürme akışına düş
+            # Graceful fallback: fall back to secondary array extraction if DLPack raises
             pass
 
-    # PyTorch/Array tensörü kontrolü (DLPack kullanılamazsa veya fallback durumunda)
+    # 2. PyTorch tensor extraction (if DLPack was bypassed or unavailable)
     if hasattr(obj, "detach") and hasattr(obj, "numpy"):
         detached = obj.detach()
         if hasattr(detached, "cpu"):
             detached = detached.cpu()
-        return Tensor(detached.numpy(), requires_grad=requires_grad)
+        np_arr = detached.numpy()
+        syn_t = Tensor(np_arr, requires_grad=requires_grad)
+        syn_t.data = np_arr
+        return syn_t
 
     if hasattr(obj, "numpy") and callable(obj.numpy):
-        return Tensor(obj.numpy(), requires_grad=requires_grad)
+        np_arr = obj.numpy()
+        syn_t = Tensor(np_arr, requires_grad=requires_grad)
+        syn_t.data = np_arr
+        return syn_t
 
+    # 3. Direct NumPy ndarray buffer sharing (guaranteed zero-copy pointer)
     if isinstance(obj, np.ndarray):
-        return Tensor(obj, requires_grad=requires_grad)
+        syn_t = Tensor(obj, requires_grad=requires_grad)
+        syn_t.data = obj
+        return syn_t
 
     if isinstance(obj, (list, tuple, int, float)):
         return Tensor(obj, requires_grad=requires_grad)
@@ -151,3 +164,116 @@ class PythonBridge:
         """Belirtilen Python modülünü sıfır sürtünmeyle Synapse'e bağlar."""
         from synapse.interop.eco_bridge import TransparentPyResolver
         return TransparentPyResolver.resolve_import(module_name)
+
+
+# =========================================================================
+# Transparent Python Import Hooks ('import py.*' & 'from python import ...')
+# =========================================================================
+from importlib.abc import MetaPathFinder, Loader
+from importlib.machinery import ModuleSpec
+from types import ModuleType
+
+
+class SynapsePyLoader(Loader):
+    """Dynamically loads and wraps Python modules for transparent interop."""
+    def __init__(self, fullname: str, is_pkg: bool = False):
+        self.fullname = fullname
+        self.is_pkg = is_pkg
+
+    def create_module(self, spec: ModuleSpec) -> Any:
+        if self.is_pkg:
+            mod = ModuleType(spec.name)
+            mod.__path__ = []
+            return mod
+        clean_name = spec.name
+        for prefix in ("py.", "python."):
+            if clean_name.startswith(prefix):
+                clean_name = clean_name[len(prefix):]
+                break
+        from synapse.interop.eco_bridge import TransparentPyResolver
+        return TransparentPyResolver.resolve_import(clean_name)
+
+    def exec_module(self, module: Any) -> None:
+        pass
+
+
+class SynapsePyFinder(MetaPathFinder):
+    """MetaPathFinder intercepting 'py.*' and 'python.*' import expressions."""
+    def find_spec(self, fullname: str, path: Any, target: Any = None) -> Optional[ModuleSpec]:
+        if fullname in ("py", "python"):
+            return ModuleSpec(fullname, SynapsePyLoader(fullname, is_pkg=True), is_package=True)
+        if fullname.startswith("py.") or fullname.startswith("python."):
+            clean = fullname
+            for prefix in ("py.", "python."):
+                if clean.startswith(prefix):
+                    clean = clean[len(prefix):]
+                    break
+            import importlib.util
+            try:
+                real_spec = importlib.util.find_spec(clean)
+                is_pkg = bool(real_spec and real_spec.submodule_search_locations is not None)
+            except Exception:
+                is_pkg = False
+            return ModuleSpec(fullname, SynapsePyLoader(fullname, is_pkg=False), is_package=is_pkg)
+        return None
+
+
+class DynamicPyNamespace(ModuleType):
+    """Dynamic namespace module for 'py' and 'python' allowing attribute-style access (e.g. py.numpy)."""
+    def __init__(self, name: str, prefix: str = ""):
+        super().__init__(name)
+        self.__path__ = []
+        self._prefix = prefix
+
+    def __getattr__(self, item: str) -> Any:
+        if item.startswith("__"):
+            raise AttributeError(item)
+        target = f"{self._prefix}.{item}" if self._prefix else item
+        from synapse.interop.eco_bridge import TransparentPyResolver
+        wrapped = TransparentPyResolver.resolve_import(target)
+        setattr(self, item, wrapped)
+        sys.modules[f"{self.__name__}.{item}"] = wrapped
+        return wrapped
+
+
+_HOOK_INSTALLED = False
+
+
+def install_import_hooks() -> None:
+    """Installs Synapse Python interop import hooks into sys.meta_path and sys.modules."""
+    global _HOOK_INSTALLED
+    if not _HOOK_INSTALLED:
+        if not any(isinstance(f, SynapsePyFinder) for f in sys.meta_path):
+            sys.meta_path.insert(0, SynapsePyFinder())
+        if "py" not in sys.modules or not isinstance(sys.modules["py"], (DynamicPyNamespace, PythonModuleWrapper)):
+            sys.modules["py"] = DynamicPyNamespace("py", "")
+        if "python" not in sys.modules or not isinstance(sys.modules["python"], (DynamicPyNamespace, PythonModuleWrapper)):
+            sys.modules["python"] = DynamicPyNamespace("python", "")
+        _HOOK_INSTALLED = True
+
+
+def uninstall_import_hooks() -> None:
+    """Uninstalls Synapse Python interop import hooks."""
+    global _HOOK_INSTALLED
+    sys.meta_path[:] = [f for f in sys.meta_path if not isinstance(f, SynapsePyFinder)]
+    _HOOK_INSTALLED = False
+
+
+# Automatically install hooks on module load
+install_import_hooks()
+
+
+__all__ = [
+    "SynapseInteropError",
+    "to_synapse_tensor",
+    "to_numpy",
+    "from_synapse",
+    "to_synapse",
+    "PythonModuleWrapper",
+    "PythonBridge",
+    "SynapsePyLoader",
+    "SynapsePyFinder",
+    "DynamicPyNamespace",
+    "install_import_hooks",
+    "uninstall_import_hooks",
+]
