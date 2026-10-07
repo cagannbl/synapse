@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 ```bash
 # Linux / macOS (POSIX) - Zero sudo friction, isolated ~/.synapse install
-curl -fsSL https://get.synapse-lang.org/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.sh | bash
 # or from local repository clone:
 ./scripts/install.sh
 ```

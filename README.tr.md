@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 ```bash
 # Linux / macOS (POSIX) - Sıfır yetki karmaşası, yerel ~/.synapse kurulumu
-curl -fsSL https://get.synapse-lang.org/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.sh | bash
 # ya da repo içinden:
 ./scripts/install.sh
 ```

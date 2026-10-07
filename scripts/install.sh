@@ -3,7 +3,7 @@
 # Synapse AI-Native Programming Language - POSIX One-Click Installer
 # Supported OS: Linux, macOS, WSL, BSD
 # Usage:
-#   curl -fsSL https://get.synapse-lang.org/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.sh | bash
 #   or locally: ./scripts/install.sh
 # ==============================================================================
 

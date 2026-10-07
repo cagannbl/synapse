@@ -5,7 +5,7 @@
     Executes instant Synapse showcase demos (NanoGPT, Tensor Matmul, Tour, DataLoader)
     without requiring manual installation.
 .EXAMPLE
-    irm https://get.synapse-lang.org/demo.ps1 | iex
+    irm https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/demo.ps1 | iex
 .EXAMPLE
     .\scripts\demo.ps1 -Preset matmul
 #>
@@ -106,5 +106,5 @@ $env:PYTHONPATH = $prevPythonPath
 
 Write-Host "======================================================" -ForegroundColor DarkGray
 Write-Host "  Synapse Quickstart Demo Finished!                   " -ForegroundColor Green
-Write-Host "  Install Full CLI: irm https://get.synapse-lang.org/install.ps1 | iex" -ForegroundColor Cyan
+Write-Host "  Install Full CLI: irm https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.ps1 | iex" -ForegroundColor Cyan
 Write-Host "======================================================" -ForegroundColor DarkGray
