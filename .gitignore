@@ -52,3 +52,7 @@ vscode-synapse/*.vsix
 .DS_Store
 Thumbs.db
 
+
+# Native build outputs from tests/examples
+examples/edge_nanogpt/nanogpt
+examples/edge_nanogpt/nanogpt.exe

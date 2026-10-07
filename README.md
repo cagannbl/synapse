@@ -16,11 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="tests/"><img src="https://img.shields.io/badge/Tests-986%2F986%20Passing-10b981?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Tests 986/986 Passing" /></a>
+  <a href="https://github.com/cagannbl/synapse/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/cagannbl/synapse/tests.yml?branch=main&style=for-the-badge&label=Tests" alt="Tests" /></a>
   <a href="examples/edge_nanogpt/"><img src="https://img.shields.io/badge/Binary%20Size-0.21%20MB-18181b?style=for-the-badge&logo=speedtest&logoColor=white" alt="Binary Size 0.21 MB" /></a>
   <a href="docs/architecture/positioning.md"><img src="https://img.shields.io/badge/Memory-Zero%20GC%20%7C%20O(1)%20Arena-27272a?style=for-the-badge&logo=ram&logoColor=white" alt="Deterministic Arena" /></a>
   <a href="synapse/codegen/"><img src="https://img.shields.io/badge/C99%20AOT-ISO%20Compliant-3f3f46?style=for-the-badge&logo=c&logoColor=white" alt="C99 ISO Compliant" /></a>
-  <a href="https://github.com/cagannbl/synapse/community"><img src="https://img.shields.io/badge/GitHub%20Health-100%25-0ea5e9?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Community Health" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-52525b?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
