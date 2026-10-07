@@ -51,9 +51,9 @@ flowchart TD
     SelectPrune --> Collector
 
     Producer -->|send(tick)| MarketChan
-    MarketChan -->|try_recv()| Detector
+    MarketChan -->|for item in channel| Detector
     Detector -->|send(high_spread_alert)| AlertChan
-    AlertChan -->|try_recv()| AlertSink
+    AlertChan -->|for alert in channel| AlertSink
 ```
 
 ---

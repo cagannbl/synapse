@@ -105,16 +105,12 @@ fn producer_routine():
 fn detector_routine():
     let processed = 0
     let anomalies = 0
-    let running = true
-    while running:
-        let item = market_channel.try_recv()
-        if item != None:
-            processed += 1
-            if item["sp"] >= 1.0:
-                alert_channel.send(item)
-                anomalies += 1
-        elif market_channel.is_closed():
-            running = false
+    # Iterating a channel blocks until it is closed AND drained, so no event is lost
+    for item in market_channel:
+        processed += 1
+        if item["sp"] >= 1.0:
+            alert_channel.send(item)
+            anomalies += 1
     alert_channel.close()
     return {"processed": processed, "anomalies": anomalies}
 
@@ -132,13 +128,8 @@ print("High-Volatility Alerts Forwarded:", det_stats["anomalies"])
 
 # Collect alerts from sink channel
 let collected_alerts = []
-let sink_running = true
-while sink_running:
-    let alert = alert_channel.try_recv()
-    if alert != None:
-        collected_alerts.append(alert)
-    elif alert_channel.is_closed():
-        sink_running = false
+for alert in alert_channel:
+    collected_alerts.append(alert)
 
 print("Alert Sink Buffer Received:", len(collected_alerts), "critical market alerts:")
 let k = 0
