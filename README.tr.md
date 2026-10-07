@@ -71,7 +71,7 @@ print("Ölçeklenmiş Tensör Çıktısı:", result)
 
 ```bash
 $ synapse run pipeline.syn
-Ölçeklenmiş Tensör Çıktısı: 3.872983
+Ölçeklenmiş Tensör Çıktısı: tensor(3.4641016151377544)
 ```
 
 ---
