@@ -40,22 +40,17 @@ If this PR touches `synapse/runtime/` or `synapse/codegen/c_emitter.py`:
 - [ ] **Strict ISO C99:** Code builds cleanly with `gcc`, `clang`, `zig cc`, and `cl.exe` under `-Wall -Wextra -pedantic` without warnings.
 - [ ] **Zero Unchecked Allocations:** Dynamic heap allocations are either arena-managed (`syn_arena_alloc`) or safely wrapped.
 - [ ] **Arena Scope Balance:** Every `syn_arena_scope_enter` has a guaranteed, exception-safe `syn_arena_scope_leave`.
-- [ ] **Binary Size Budget:** Standalone binary size remains lean (~0.21MB target).
+- [ ] **Binary Size Budget:** Standalone binary size remains lean (the CI binary-size job enforces a 512 KB budget for the Edge NanoGPT example).
 
 ---
 
 ## 🧪 Test Suite & Verification Proof
 
-All 827+ tests must pass with zero regressions.
-
-```shell
-# Paste your pytest output summary below:
-pytest
-```
+The full test suite must pass (CI runs it on Linux and macOS).
 
 **Verification Proof:**
 ```text
-======================= 827 passed in 128.61s (100%) =======================
+# Paste the last line of your local `pytest` run here
 ```
 
 **New Tests Added:**

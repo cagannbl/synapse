@@ -182,7 +182,7 @@ Looking for an exciting place to start? We have curated five high-impact, beginn
 - **Task Description:**
   - Write a modular implementation of ResNet-18 or MobileNet-v1 using Synapse's `nn` module (`Conv2d`, `Linear`, `ReLU`, `Sequential`).
   - Demonstrate loading pre-trained weights from `.safetensors` via `safetensors.load()`.
-  - Add a compilation script showing how to transpile the model to a standalone 0.21MB executable using `synapse emit-c --profile=standalone`.
+  - Add a compilation script showing how to transpile the model to a native executable using `synapse emit-c --profile=standalone`.
 
 ---
 

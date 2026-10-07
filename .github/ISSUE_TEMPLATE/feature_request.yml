@@ -53,7 +53,7 @@ body:
     id: c99_feasibility
     attributes:
       label: "C99 Transpilation & Standalone Feasibility"
-      description: "How can this feature transpile to clean ISO C99 while maintaining standalone binary sizes (~0.21MB) and zero dynamic allocations?"
+      description: "How can this feature transpile to clean ISO C99 while keeping native binaries small and allocations arena-managed?"
       placeholder: "This can be lowered to a fixed-size arena loop with OpenMP SIMD pragma..."
     validations:
       required: false
