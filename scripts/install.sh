@@ -48,14 +48,21 @@ mkdir -p "$LIB_DIR"
 
 # 3. Install/Copy Synapse package files
 printf "\033[36m[3/5] Installing Synapse core libraries...\033[0m\n"
+# Install from the local clone, or straight from this GitHub repository when piped
+# from curl. pip also installs the dependencies (numpy) into the same directory.
 if [ -n "$SRC_DIR" ] && [ -d "$SRC_DIR/synapse" ]; then
-    rm -rf "$DEST_PKG_DIR"
-    cp -R "$SRC_DIR/synapse" "$DEST_PKG_DIR"
+    PKG_SOURCE="$SRC_DIR"
 else
-    # Remote fallback: if piped from curl, install via pip or download bundle
-    if "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
-        "$PYTHON_BIN" -m pip install --target "$LIB_DIR" synapse-lang >/dev/null 2>&1 || true
-    fi
+    PKG_SOURCE="git+https://github.com/cagannbl/synapse.git"
+fi
+if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
+    printf "\033[31mError: pip is required (try: %s -m ensurepip).\033[0m\n" "$PYTHON_BIN" >&2
+    exit 1
+fi
+rm -rf "$DEST_PKG_DIR"
+if ! "$PYTHON_BIN" -m pip install --quiet --upgrade --target "$LIB_DIR" "$PKG_SOURCE"; then
+    printf "\033[31mError: failed to install Synapse from %s\033[0m\n" "$PKG_SOURCE" >&2
+    exit 1
 fi
 
 # Create executable runner in ~/.synapse/bin/synapse
