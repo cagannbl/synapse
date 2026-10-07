@@ -71,7 +71,7 @@ print("Scaled Tensor Output:", result)
 
 ```bash
 $ synapse run pipeline.syn
-Scaled Tensor Output: 3.872983
+Scaled Tensor Output: tensor(3.4641016151377544)
 ```
 
 ---
