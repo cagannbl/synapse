@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 #line 6 "<source>"
     printf("%s\n", "==================================================================");
 #line 7 "<source>"
-    printf("%s\n", "Synapse Edge NanoGPT: Zero-Dependency C99 Standalone LLM Engine");
+    printf("%s\n", "Synapse Edge NanoGPT: one transformer block compiled to native C99");
 #line 8 "<source>"
     printf("%s\n", "==================================================================");
 #line 11 "<source>"
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 #line 13 "<source>"
     int seq_len = 8;
 #line 15 "<source>"
-    printf("%s\n", "Architecture Config: vocab_size=64, d_model=32, seq_len=8");
+    printf("%s\n", "Config: seq_len=2, d_model=2 (toy weights for demonstration)");
 #line 60 "<source>"
     printf("%s\n", "\n[Stage 1] Initializing Transformer Weights & Projection Matrices...");
 #line 61 "<source>"
@@ -166,6 +166,6 @@ int main(int argc, char** argv) {
 #line 101 "<source>"
     syn_tensor_print("", logits);
 #line 103 "<source>"
-    printf("%s\n", "\nEdge NanoGPT Forward Pass completed with 0 runtime allocations and deterministic memory!");
+    printf("%s\n", "\nEdge NanoGPT forward pass completed.");
     return 0;
 }
