@@ -82,7 +82,7 @@ Synapse is designed with a strictly decoupled, modular compiler pipeline. Every 
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/synapse-lang/synapse.git
+git clone https://github.com/<your-username>/synapse.git
 cd synapse
 
 # 2. Create and activate an isolated virtual environment
@@ -95,13 +95,13 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 
 # 3. Install Synapse in editable development mode with test dependencies
-pip install -e .
-pip install pytest pytest-cov ruff black mypy
+pip install -e ".[test]"
+pip install pytest-cov ruff black mypy
 
 # 4. Verify compiler auto-detection
 python -c "from synapse.codegen.native_compiler import NativeCompiler; print('Detected compiler:', NativeCompiler().find_c_compiler())"
 
-# 5. Run the entire test suite (all 827+ tests must pass)
+# 5. Run the entire test suite (everything must pass; CI runs it on Linux and macOS)
 pytest
 ```
 
@@ -201,7 +201,7 @@ To preserve the zero-overhead, safety, and reliability guarantees of Synapse, al
 - Check that arena scopes (`syn_arena_scope_enter` / `syn_arena_scope_leave`) are strictly balanced.
 
 ### C. Zero Regressions & 100% Test Pass Rate
-- Synapse has **827+ automated tests**. Your PR **must not break any existing test**.
+- Synapse has 1,000+ automated tests, run in CI on every push. Your PR **must not break any existing test**.
 - Every bug fix must include a regression test reproducing the issue.
 - Every new feature must include comprehensive unit and integration tests.
 
