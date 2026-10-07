@@ -192,6 +192,7 @@ class StaticShapeChecker:
 
         # Diagnostics collected
         self.diagnostics: list[DiagnosticReport] = []
+        self.errors: list[CompileTimeShapeMismatchError] = []
 
     # -------------------------------------------------------------------------
     # Scope Management
@@ -279,6 +280,7 @@ class StaticShapeChecker:
             },
         )
         self.diagnostics.append(report)
+        self.errors.append(err)
 
         if self.raise_on_error:
             raise err
@@ -820,7 +822,7 @@ class StaticShapeChecker:
                     p_tt = TensorType.from_string(
                         p.type_annot if isinstance(p.type_annot, str) else str(p.type_annot)
                     )
-                if p_tt is not None:
+                if p_tt is not None and p_tt.to_shape_tuple():
                     self.set_var_shape(p.name, p_tt.to_shape_tuple(), contract=p_tt)
 
             for s in node.body:
@@ -905,18 +907,19 @@ class StaticShapeChecker:
                 p_tt = TensorType.from_string(
                     p.type_annot if isinstance(p.type_annot, str) else str(p.type_annot)
                 )
-            shape = p_tt.to_shape_tuple() if p_tt else None
+            # A bare `Tensor` annotation carries no shape contract (unknown, not scalar).
+            shape = (p_tt.to_shape_tuple() or None) if p_tt else None
             param_shapes.append((p.name, shape))
 
         ret_shape = None
         if getattr(stmt, "return_tensor_type", None):
-            ret_shape = stmt.return_tensor_type.to_shape_tuple()
+            ret_shape = stmt.return_tensor_type.to_shape_tuple() or None
         elif stmt.return_type:
             r_tt = TensorType.from_string(
                 stmt.return_type if isinstance(stmt.return_type, str) else str(stmt.return_type)
             )
             if r_tt:
-                ret_shape = r_tt.to_shape_tuple()
+                ret_shape = r_tt.to_shape_tuple() or None
 
         self.functions[stmt.name] = (param_shapes, ret_shape)
 
@@ -939,6 +942,7 @@ class StaticShapeChecker:
 
         try:
             self.diagnostics.clear()
+            self.errors.clear()
             self.visit(ast)
             return list(self.diagnostics)
         finally:

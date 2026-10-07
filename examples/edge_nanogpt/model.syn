@@ -4,7 +4,7 @@
 # =============================================================================
 
 print("==================================================================")
-print("Synapse Edge NanoGPT: Zero-Dependency C99 Standalone LLM Engine")
+print("Synapse Edge NanoGPT: one transformer block compiled to native C99")
 print("==================================================================")
 
 # 1. Hyperparameters
@@ -12,7 +12,7 @@ let vocab_size = 64
 let d_model = 32
 let seq_len = 8
 
-print("Architecture Config: vocab_size=64, d_model=32, seq_len=8")
+print("Config: seq_len=2, d_model=2 (toy weights for demonstration)")
 
 # 2. Layer Normalization: (x - mean) / sqrt(var + eps) * gamma + beta
 fn layer_norm(x: Tensor, gamma: Tensor, beta: Tensor) -> Tensor:
@@ -100,4 +100,4 @@ let logits = layer_output @ W_lm_head
 print("\n[Stage 4] Next-Token Prediction Logits (Vocab Slice):")
 print(logits)
 
-print("\nEdge NanoGPT Forward Pass completed with 0 runtime allocations and deterministic memory!")
+print("\nEdge NanoGPT forward pass completed.")

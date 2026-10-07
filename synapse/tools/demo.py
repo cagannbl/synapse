@@ -2,7 +2,7 @@
 Synapse Instant CLI Showcase & Quickstart Demo Engine
 =====================================================
 Provides interactive and automated terminal showcases for Synapse features:
-- nanogpt: 0.21 MB C99 standalone NanoGPT forward pass & logits
+- nanogpt: compiles and runs the Edge NanoGPT example as a native C99 binary
 - matmul: 2x2 matrix multiplication (@), autograd derivative graph, and O(1) arena scope
 - tour: 6-step Tour of Synapse interactive walkthrough
 - dataloader: High-throughput Zero-Starvation DataLoader benchmark
@@ -47,6 +47,7 @@ DIM = "\033[2m" if USE_COLOR else ""
 CYAN = "\033[36m" if USE_COLOR else ""
 GREEN = "\033[32m" if USE_COLOR else ""
 YELLOW = "\033[33m" if USE_COLOR else ""
+RED = "\033[31m" if USE_COLOR else ""
 GRAY = "\033[90m" if USE_COLOR else ""
 WHITE = "\033[97m" if USE_COLOR else ""
 
@@ -82,13 +83,12 @@ def _box(title: str, lines: Sequence[str], min_width: int = 76) -> str:
     max_line_len = max(vis_lengths) if vis_lengths else 0
     title_vis_len = _vlen(title)
 
-    # box_width includes borders and left/right padding (2 left, 2 right)
     inner_width = max(min_width - 4, max_line_len + 2, title_vis_len + 4)
-    box_width = inner_width + 4
 
-    hbar = "─" * (box_width - 2)
+    # Every row is inner_width + 6 columns wide: border, 2 spaces, content, 2 spaces, border.
+    hbar = "─" * (inner_width + 4)
     top_title = f" {BOLD}{WHITE}{title}{RESET} "
-    rem_bar = "─" * max(0, box_width - 4 - title_vis_len)
+    rem_bar = "─" * max(0, inner_width + 1 - title_vis_len)
 
     out = [f"{GRAY}┌─{RESET}{top_title}{GRAY}{rem_bar}┐{RESET}"]
     for line in lines:
@@ -116,93 +116,54 @@ def _find_repo_root() -> str:
 
 def run_demo_nanogpt() -> int:
     """
-    Runs the 0.21 MB C99 standalone NanoGPT forward pass and displays output
-    in a sleek, minimalist console box.
+    Compiles examples/edge_nanogpt/model.syn to a native binary (if needed), runs it,
+    and shows its real size, latency and output.
     """
     repo_root = _find_repo_root()
     nanogpt_dir = os.path.join(repo_root, "examples", "edge_nanogpt")
-    is_win = sys.platform == "win32"
-    exe_name = "nanogpt.exe" if is_win else "nanogpt"
-    exe_path = os.path.join(nanogpt_dir, exe_name)
+    exe_path = os.path.join(nanogpt_dir, "nanogpt.exe" if sys.platform == "win32" else "nanogpt")
 
-    # If binary is missing, attempt to compile it with build.py or NativeCompiler
     if not os.path.isfile(exe_path):
-        build_script = os.path.join(nanogpt_dir, "build.py")
-        if os.path.isfile(build_script):
-            try:
-                res = subprocess.run([sys.executable, build_script], capture_output=True, text=True, cwd=nanogpt_dir)
-            except Exception:
-                pass
+        from synapse.codegen.native_compiler import NativeCompiler
 
-    binary_size_mb = 0.21
-    raw_output = ""
-    elapsed_ms = 0.0
+        compiler = NativeCompiler()
+        if not compiler.find_c_compiler():
+            _safe_print("The NanoGPT demo needs a C compiler (gcc, clang, cl.exe or zig cc); none was found.")
+            return 1
+        with open(os.path.join(nanogpt_dir, "model.syn"), encoding="utf-8") as f:
+            source = f.read()
+        ok, res = compiler.compile_source_to_executable(source, exe_path)
+        if not ok:
+            _safe_print(f"Failed to compile examples/edge_nanogpt/model.syn:\n{res}")
+            return 1
 
-    if os.path.isfile(exe_path):
-        binary_size_mb = os.path.getsize(exe_path) / (1024 * 1024)
-        t0 = time.perf_counter()
-        try:
-            res = subprocess.run([exe_path], capture_output=True, text=True, cwd=nanogpt_dir, timeout=10)
-            elapsed_ms = (time.perf_counter() - t0) * 1000.0
-            raw_output = res.stdout if res.returncode == 0 else (res.stdout + res.stderr)
-        except Exception as e:
-            raw_output = f"Execution notice: {e}"
-    else:
-        # Fallback simulation if running on environment without precompiled binary
-        raw_output = (
-            "==================================================================\n"
-            "Synapse Edge NanoGPT: Zero-Dependency C99 Standalone LLM Engine\n"
-            "==================================================================\n"
-            "Architecture Config: vocab_size=64, d_model=32, seq_len=8\n\n"
-            "[Stage 1] Initializing Transformer Weights & Projection Matrices...\n"
-            "[Stage 2] Running Autoregressive Edge Inference Step...\n"
-            "Input Embedding Tensor (Seq=2, Dim=2):\n"
-            "tensor([\n"
-            "  [0.4500, 0.0000],\n"
-            "  [0.8500, 0.3300]\n"
-            "])\n\n"
-            "[Stage 3] Transformer Output Layer:\n"
-            "tensor([\n"
-            "  [0.4500, -0.0000],\n"
-            "  [0.8500, 0.3300]\n"
-            "])\n\n"
-            "[Stage 4] Next-Token Prediction Logits (Vocab Slice):\n"
-            "tensor([\n"
-            "  [0.2250, -0.0000, 0.3600],\n"
-            "  [0.4910, 0.2970, 0.6800]\n"
-            "])\n\n"
-            "Edge NanoGPT Forward Pass completed with 0 runtime allocations and deterministic memory!\n"
-        )
-        binary_size_mb = 0.21
-        elapsed_ms = 0.85
+    t0 = time.perf_counter()
+    try:
+        res = subprocess.run([exe_path], capture_output=True, text=True, cwd=nanogpt_dir, timeout=10)
+    except Exception as e:
+        _safe_print(f"Failed to run {exe_path}: {e}")
+        return 1
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    if res.returncode != 0:
+        _safe_print(res.stdout + res.stderr)
+        return res.returncode
 
-    # Format lines for display
-    rel_target = os.path.relpath(exe_path, repo_root).replace("\\", "/") if os.path.isfile(exe_path) else "examples/edge_nanogpt/nanogpt.exe"
+    size_kb = os.path.getsize(exe_path) / 1024
+    rel_target = os.path.relpath(exe_path, repo_root).replace("\\", "/")
     display_lines = [
-        f"{CYAN}Synapse AI Standalone Edge Inference Showcase{RESET}",
-        f"{DIM}Compiled directly from model.syn via Native C99 AOT Engine{RESET}",
+        f"{CYAN}Native binary compiled from examples/edge_nanogpt/model.syn{RESET}",
+        f"{DIM}One pre-LN transformer block (attention + MLP) on toy 2x2 weights{RESET}",
         "---",
-        f"{BOLD}Binary Target:{RESET}     {rel_target}",
-        f"{BOLD}Binary Footprint:{RESET}  {GREEN}{binary_size_mb:.2f} MB{RESET} {DIM}(Target: < 5.0 MB standalone){RESET}",
-        f"{BOLD}Architecture:{RESET}      vocab=64, d_model=32, seq_len=8, heads=4, layers=2",
-        f"{BOLD}Runtime Engine:{RESET}    Pure ISO C99 | 0 External Dependencies | 0 GC Allocations",
-        f"{BOLD}Inference Latency:{RESET} {GREEN}{elapsed_ms:.2f} ms{RESET}",
+        f"{BOLD}Binary:{RESET}       {rel_target}",
+        f"{BOLD}Size:{RESET}         {GREEN}{size_kb:.1f} KB{RESET}",
+        f"{BOLD}Run time:{RESET}     {GREEN}{elapsed_ms:.2f} ms{RESET} {DIM}(including process start-up){RESET}",
         "---",
-        f"{BOLD}Forward Pass Execution Trace:{RESET}",
+        f"{BOLD}Program output:{RESET}",
         "",
-        f"  {CYAN}▶ Stage 1:{RESET} Initialized static projection matrices (Q, K, V, W_out)",
-        f"  {CYAN}▶ Stage 2:{RESET} Autoregressive token embedding lookup [Seq=2, Dim=2]:",
-        f"    {GRAY}[[0.4500, 0.0000], [0.8500, 0.3300]]{RESET}",
-        f"  {CYAN}▶ Stage 3:{RESET} Multi-Head Self-Attention & Feedforward Layer Output:",
-        f"    {GRAY}[[0.4500, -0.0000], [0.8500, 0.3300]]{RESET}",
-        f"  {CYAN}▶ Stage 4:{RESET} Top Next-Token Prediction Logits (Vocab Slice):",
-        f"    {GREEN}[[0.2250, -0.0000, 0.3600], [0.4910, 0.2970, 0.6800]]{RESET}",
-        "",
-        "---",
-        f"{GREEN}✓ Deterministic Verification Passed:{RESET} 0 Heap Allocations | 0 GC Pauses",
     ]
+    display_lines += [f"  {line}" for line in res.stdout.strip().splitlines() if not set(line.strip()) <= {"="}]
 
-    _safe_print("\n" + _box("SYNAPSE DEMO: EDGE NANOGPT (0.21 MB C99 LLM)", display_lines) + "\n")
+    _safe_print("\n" + _box("SYNAPSE DEMO: EDGE NANOGPT (NATIVE C99)", display_lines) + "\n")
     return 0
 
 
@@ -323,7 +284,7 @@ def run_demo_tour(interactive: bool = True) -> int:
                 "id": 5,
                 "title": "Adım 5: No-GIL Eşzamanlılık & CSP Kanalları",
                 "description": "Python'ın GIL bariyeri olmadan, Go/Erlang tarzı hafif görevler (spawn) ve Channel.",
-                "code": "let ch = Channel(2)\nlet worker = spawn(producer)\nlet msg = ch.receive()"
+                "code": "let ch = Channel(2)\nlet worker = spawn(producer)\nlet msg = ch.recv()"
             },
             {
                 "id": 6,
@@ -421,7 +382,8 @@ def run_demo_dataloader() -> int:
         f"  • IPC Overhead:     {GREEN}0.00 µs{RESET} (Zero-copy in-process shared ring-buffer)",
         f"  • DLPack Export:    Hazır (__dlpack__ C-ABI sıfır kopyalı aktarım)",
         "---",
-        f"{GREEN}✓ Zero-Starvation Doğrulandı:{RESET} GPU bekleme süresi 0 ms",
+        (f"{GREEN}✓ Tüm örnekler alındı:{RESET} {total_items}/{n_samples}" if total_items == n_samples
+         else f"{RED}✗ Eksik örnek:{RESET} {total_items}/{n_samples}"),
     ]
 
     _safe_print("\n" + _box("SYNAPSE DEMO: ZERO-STARVATION DATALOADER", lines) + "\n")

@@ -9,6 +9,10 @@ zero-dependency edge inference executable using NativeCompiler.
 import os
 import sys
 import argparse
+
+# Allow running straight from a repository clone without `pip install -e .`
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 from synapse.codegen.native_compiler import NativeCompiler
 
 

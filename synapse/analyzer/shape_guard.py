@@ -545,7 +545,19 @@ class TensorShapeGuard:
         """Parses source_text and verifies shape invariants."""
         tokens = Lexer(self.source_text).tokenize()
         ast = Parser(tokens).parse()
-        return self.verify_ast(ast)
+        errors = self.verify_ast(ast)
+
+        # The guard's solver unifies unknown symbols freely, so it accepts e.g.
+        # `Tensor[N, D] @ Tensor[K, M]` inside a function whose signature fixes D and K.
+        # The static checker treats signature dimensions as rigid; report what it finds
+        # on lines the guard has not already flagged.
+        from synapse.analyzer.shape_checker import StaticShapeChecker
+
+        checker = StaticShapeChecker(source=self.source_text, filepath=self.filename, raise_on_error=False)
+        checker.check(ast)
+        flagged_lines = {e.line for e in errors}
+        errors.extend(e for e in checker.errors if e.line not in flagged_lines)
+        return errors
 
 
 def verify_shapes_in_file(filepath: str) -> Tuple[bool, List[CompileTimeShapeMismatchError]]:

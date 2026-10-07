@@ -6,6 +6,7 @@ import time
 from typing import Any, Callable, Optional
 from synapse.vm.opcodes import Opcode
 from synapse.vm.compiler import CodeObject
+from synapse.parser.ast_nodes import Some, Ok, Err, Option, Result, _NoneOption, NoneOption, LiteralExpr
 from synapse.core.tensor import Tensor, tensor, zeros, ones, randn, QuantizedTensor, quantize, dequantize
 from synapse.core.autograd import grad
 from synapse.core.generators import TokenStream, SynapseGenerator, StreamPipeline
@@ -134,11 +135,20 @@ from synapse.ai.agent_runtime import AgentRuntime
 
 
 class PromptObject:
-    def __init__(self, name: str, params: list[str], fields: dict[str, Any], vm: "VirtualMachine"):
+    def __init__(
+        self,
+        name: str,
+        params: list[str],
+        fields: dict[str, Any],
+        vm: "VirtualMachine",
+        scope: Optional[dict[str, Any]] = None,
+    ):
         self.name = name
         self.params = params
         self.fields = fields
         self.vm = vm
+        # Variables visible where the prompt was defined (like a closure)
+        self.scope = scope if scope is not None else {}
         self.engine = PromptEngine()
 
     def __call__(self, *args, **kwargs) -> Any:
@@ -164,16 +174,19 @@ class PromptObject:
         if field_name not in self.fields:
             return None
         expr = self.fields[field_name]
-        if hasattr(expr, "value"):
+        if isinstance(expr, LiteralExpr):
             val = expr.value
             if isinstance(val, str):
                 for k, v in param_dict.items():
                     val = val.replace(f"{{{k}}}", str(v))
-                return val
             return val
-        elif hasattr(expr, "name") and expr.name in param_dict:
-            return param_dict[expr.name]
-        return str(expr)
+        # Any other field is an expression (e.g. "Translate to " + lang): evaluate it.
+        from synapse.vm.compiler import Compiler
+
+        compiler = Compiler(name=f"<prompt {self.name}.{field_name}>")
+        compiler.compile_expr(expr)
+        compiler.code.emit(Opcode.RETURN_VALUE)
+        return self.vm.run_code(compiler.code, {**self.vm.globals, **self.scope, **param_dict})
 
 
 class Frame:
@@ -184,6 +197,51 @@ class Frame:
         self.stack: list[Any] = []
         self.current_line: int = 1
         self.current_col: int = 1
+
+
+def _syn_iter(obj: Any):
+    """Iterator for `for` loops; falls back to len()/index access for sequence-like objects."""
+    try:
+        return iter(obj)
+    except TypeError:
+        if hasattr(obj, "__len__") and hasattr(obj, "__getitem__"):
+            return (obj[i] for i in range(len(obj)))
+        raise
+
+
+_LOOP_DONE = (False, None)
+
+
+def _syn_next(it: Any) -> tuple:
+    """Advances a `for` loop iterator: returns (has_value, value)."""
+    try:
+        return (True, next(it))
+    except StopIteration:
+        return _LOOP_DONE
+
+
+def _syn_try(value: Any) -> tuple:
+    """The `?` operator: (True, unwrapped) for Ok/Some/plain values, (False, value) to propagate Err/None."""
+    if isinstance(value, (Ok, Some)):
+        return (True, value.value)
+    if isinstance(value, Err):
+        return (False, value)
+    if value is None or isinstance(value, _NoneOption):
+        return (False, NoneOption)
+    return (True, value)
+
+
+def _match_ctor(subject: Any, ctor: str) -> tuple:
+    """Runtime check for Some/Ok/Err/None patterns: returns (matched, inner value)."""
+    if ctor == "None":
+        return (subject is None or isinstance(subject, _NoneOption), None)
+    if ctor == "Some":
+        return (True, subject.value) if isinstance(subject, Some) else (False, None)
+    if ctor == "Ok":
+        return (True, subject.value) if isinstance(subject, Ok) else (False, None)
+    if ctor == "Err":
+        return (True, subject.error) if isinstance(subject, Err) else (False, None)
+    return (False, None)
 
 
 class VirtualMachine:
@@ -205,6 +263,15 @@ class VirtualMachine:
             "len": len,
             "range": range,
             "sum": lambda x, *a, **kw: x.sum(*a, **kw) if hasattr(x, "sum") else sum(x, *a, **kw),
+            "__syn_match_ctor__": _match_ctor,
+            "__syn_iter__": _syn_iter,
+            "__syn_try__": _syn_try,
+            "__syn_next__": _syn_next,
+            "Some": Some,
+            "Ok": Ok,
+            "Err": Err,
+            "Option": Option,
+            "Result": Result,
             "sqrt": lambda t: t ** 0.5 if hasattr(t, "relu") else math.sqrt(t),
             "abs": abs,
             "min": min,
@@ -572,12 +639,13 @@ class VirtualMachine:
                     frame.stack.append(elements)
 
                 elif opcode == Opcode.BUILD_DICT:
-                    d = {}
+                    pairs = []
                     for _ in range(arg):
                         v = frame.stack.pop()
                         k = frame.stack.pop()
-                        d[k] = v
-                    frame.stack.append(d)
+                        pairs.append((k, v))
+                    pairs.reverse()  # popped last-to-first; restore source order
+                    frame.stack.append(dict(pairs))
 
                 elif opcode == Opcode.BINARY_SUBSCR:
                     sub = frame.stack.pop()
@@ -621,7 +689,7 @@ class VirtualMachine:
 
                 elif opcode == Opcode.DEFINE_PROMPT:
                     name, params, fields = code.constants[arg]
-                    prompt_obj = PromptObject(name, params, fields, self)
+                    prompt_obj = PromptObject(name, params, fields, self, scope=frame.locals)
                     frame.stack.append(prompt_obj)
 
                 elif opcode == Opcode.DEFINE_AGENT:

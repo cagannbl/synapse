@@ -30,7 +30,7 @@
       "id": 5,
       "title": "Adım 5: No-GIL Eşzamanlılık & CSP Kanalları",
       "description": "Python'ın GIL bariyeri olmadan, Go/Erlang tarzı hafif görevler (`spawn`) ve tip güvenli `Channel` ile veri iletişimi.",
-      "code": "# 5. No-GIL Lightweight Concurrency and Channels\nlet ch = Channel(2)\n\nfn producer():\n    ch.send(\"Synapse Ajan 1 basariyla tamamlandi.\")\n    ch.send(\"Synapse Ajan 2 veri aktardi.\")\n\nlet worker = spawn(producer)\nlet msg1 = ch.receive()\nlet msg2 = ch.receive()\n\nprint(\"Alinan Mesaj 1:\", msg1)\nprint(\"Alinan Mesaj 2:\", msg2)\n"
+      "code": "# 5. No-GIL Lightweight Concurrency and Channels\nlet ch = Channel(2)\n\nfn producer():\n    ch.send(\"Synapse Ajan 1 basariyla tamamlandi.\")\n    ch.send(\"Synapse Ajan 2 veri aktardi.\")\n\nlet worker = spawn(producer)\nlet msg1 = ch.recv()\nlet msg2 = ch.recv()\n\nprint(\"Alinan Mesaj 1:\", msg1)\nprint(\"Alinan Mesaj 2:\", msg2)\n"
     },
     {
       "id": 6,

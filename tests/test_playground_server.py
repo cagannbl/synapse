@@ -4,6 +4,7 @@ and development server (`playground/server.py`).
 """
 
 import io
+import json
 import os
 import tempfile
 import threading
@@ -75,7 +76,7 @@ def test_server_serves_worker_js(live_server):
         content_type = resp.headers.get("Content-Type", "")
         assert "javascript" in content_type
         body = resp.read().decode("utf-8")
-        assert "WasmCooperativeQueue" in body
+        assert "/api/run" in body
         assert "onmessage" in body
 
 
@@ -88,22 +89,47 @@ def test_server_coop_coep_headers(live_server):
         assert resp.headers.get("Cross-Origin-Embedder-Policy") == "require-corp"
 
 
-def test_server_cors_headers_and_options_preflight(live_server):
-    """5. Test CORS allow-origin headers and OPTIONS preflight handler."""
+def _post_run(base_url, body: bytes, headers=None):
+    req = urllib.request.Request(
+        f"{base_url}/api/run",
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/json", **(headers or {})},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30.0) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read())
+
+
+def test_api_run_executes_real_synapse_code(live_server):
+    """5. /api/run runs the program with the real interpreter and returns its output."""
     base_url, _ = live_server
+    code = "let A = tensor([[1.0, 2.0], [3.0, 4.0]])\nprint((A @ A).sum())\nprint(undefined_name)\n"
+    status, result = _post_run(base_url, json.dumps({"code": code}).encode())
+    assert status == 200
+    assert result["stdout"].strip() == "tensor(54.0)"
+    assert "Name 'undefined_name' is not defined" in result["stderr"]
+    assert result["exit_code"] != 0
 
-    # GET request check
-    req = urllib.request.Request(f"{base_url}/index.html")
-    with urllib.request.urlopen(req, timeout=5.0) as resp:
-        assert resp.headers.get("Access-Control-Allow-Origin") == "*"
-        assert "Cache-Control" in resp.headers
 
-    # OPTIONS preflight check
-    req_options = urllib.request.Request(f"{base_url}/index.html", method="OPTIONS")
-    with urllib.request.urlopen(req_options, timeout=5.0) as resp:
-        assert resp.status == 200
-        assert resp.headers.get("Access-Control-Allow-Origin") == "*"
-        assert "GET" in resp.headers.get("Access-Control-Allow-Methods", "")
+def test_api_run_rejects_cross_origin_requests(live_server):
+    """6. Other websites must not be able to run code through the local server."""
+    base_url, _ = live_server
+    body = json.dumps({"code": 'print("hi")'}).encode()
+    status, _ = _post_run(base_url, body, {"Origin": "https://evil.example"})
+    assert status == 403
+    status, _ = _post_run(base_url, body, {"Host": "evil.example"})
+    assert status == 403
+    status, _ = _post_run(base_url, body, {"Origin": base_url})
+    assert status == 200
+
+
+def test_no_wildcard_cors_header(live_server):
+    base_url, _ = live_server
+    with urllib.request.urlopen(f"{base_url}/index.html", timeout=5.0) as resp:
+        assert resp.headers.get("Access-Control-Allow-Origin") is None
 
 
 def test_server_wasm_mime_type_serving():
@@ -187,40 +213,18 @@ def test_index_html_ui_components():
     # Verify all 4 required examples
     assert "Tensor Matris" in html
     assert "AI Prompt" in html
-    assert "LazyFrame" in html
+    assert "DataFrame" in html
     assert "CSP" in html or "Kanalları" in html
 
 
-def test_worker_js_protocol_and_cooperative_queue():
-    """10. Test that worker.js contains the Web Worker protocol and cooperative queue."""
-    assets_dir = get_default_directory()
-    worker_path = os.path.join(assets_dir, "worker.js")
-    assert os.path.isfile(worker_path)
-
-    with open(worker_path, "r", encoding="utf-8") as f:
+def test_worker_js_forwards_programs_to_the_runtime():
+    """10. The worker sends the editor contents to /api/run and relays the output."""
+    with open(os.path.join(get_default_directory(), "worker.js"), "r", encoding="utf-8") as f:
         worker_code = f.read()
-
-    # Verify Web Worker messaging API
-    assert "onmessage" in worker_code
-    assert "postMessage" in worker_code
-
-    # Verify cooperative queue & single-threaded WASM CSP channel
-    assert "WasmCooperativeQueue" in worker_code
-    assert "WasmChannel" in worker_code
-    assert "enqueue" in worker_code
-    assert "runNext" in worker_code
-    assert "runAll" in worker_code
-
-    # Verify example handlers
-    assert "executeExample1_Tensor" in worker_code
-    assert "executeExample2_AIPrompt" in worker_code
-    assert "executeExample3_LazyFrame" in worker_code
-    assert "executeExample4_CSP" in worker_code
-
-    # Verify stdout / stderr streaming
-    assert "stdout" in worker_code
-    assert "stderr" in worker_code
-    assert "done" in worker_code
+    assert "/api/run" in worker_code
+    assert "onmessage" in worker_code and "postMessage" in worker_code
+    for msg_type in ("ready", "stdout", "stderr", "done", "error"):
+        assert f'"{msg_type}"' in worker_code
 
 
 def test_cli_argument_parsing():

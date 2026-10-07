@@ -56,3 +56,4 @@ Thumbs.db
 # Native build outputs from tests/examples
 examples/edge_nanogpt/nanogpt
 examples/edge_nanogpt/nanogpt.exe
+examples/edge_nanogpt/nanogpt.c

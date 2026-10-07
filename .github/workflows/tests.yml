@@ -29,3 +29,38 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
+
+  binary-size:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: python -m pip install -e .
+
+      - name: Build and run Edge NanoGPT
+        run: |
+          python examples/edge_nanogpt/build.py -o nanogpt-bin
+          ./nanogpt-bin
+
+      - name: Report binary size
+        run: |
+          python - <<'PY'
+          import os, sys
+          size = os.path.getsize("nanogpt-bin")
+          line = f"Edge NanoGPT binary on ${{ matrix.os }}: {size / 1024:.1f} KB"
+          print(line)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(line + "\n")
+          budget = 512 * 1024
+          if size > budget:
+              sys.exit(f"Binary exceeds the {budget // 1024} KB budget")
+          PY
