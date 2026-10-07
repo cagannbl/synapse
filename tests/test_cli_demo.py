@@ -2,7 +2,7 @@
 Tests for Synapse CLI Instant Showcase Demos (synapse demo)
 ===========================================================
 Validates:
-- synapse demo --preset=nanogpt (0.21 MB C99 NanoGPT forward pass)
+- synapse demo --preset=nanogpt (compiles and runs the NanoGPT example natively)
 - synapse demo --preset=matmul (2x2 matrix multiplication, autograd graph, O(1) arena)
 - synapse demo (default preset -> nanogpt)
 - synapse demo --preset=tour (6-step interactive tour in non-interactive mode)
@@ -10,6 +10,7 @@ Validates:
 - invalid preset rejection
 """
 
+import re
 import subprocess
 import sys
 import pytest
@@ -25,11 +26,11 @@ def test_cli_demo_nanogpt():
     res = run_cli("demo", "--preset=nanogpt")
     assert res.returncode == 0, f"Error: {res.stderr}"
     assert "SYNAPSE DEMO: EDGE NANOGPT" in res.stdout
-    assert "0.21 MB" in res.stdout
-    assert "Forward Pass Execution Trace:" in res.stdout
-    assert "Stage 1:" in res.stdout
-    assert "Stage 4:" in res.stdout
-    assert "Deterministic Verification Passed" in res.stdout
+    assert re.search(r"Size:\s+\d+\.\d KB", res.stdout)
+    # The program output shown is the binary's real stdout
+    assert "[Stage 1]" in res.stdout
+    assert "[Stage 4]" in res.stdout
+    assert "Edge NanoGPT forward pass completed." in res.stdout
 
 
 def test_cli_demo_matmul():
@@ -51,7 +52,7 @@ def test_cli_demo_default():
     res = run_cli("demo")
     assert res.returncode == 0, f"Error: {res.stderr}"
     assert "SYNAPSE DEMO: EDGE NANOGPT" in res.stdout
-    assert "0.21 MB" in res.stdout
+    assert re.search(r"Size:\s+\d+\.\d KB", res.stdout)
 
 
 def test_cli_demo_tour():
@@ -69,7 +70,7 @@ def test_cli_demo_dataloader():
     res = run_cli("demo", "--preset=dataloader")
     assert res.returncode == 0, f"Error: {res.stderr}"
     assert "SYNAPSE DEMO: ZERO-STARVATION DATALOADER" in res.stdout
-    assert "Zero-Starvation Doğrulandı" in res.stdout
+    assert "Tüm örnekler alındı: 512/512" in res.stdout
     assert "samples/sec" in res.stdout
 
 
