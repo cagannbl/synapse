@@ -70,7 +70,7 @@ print("Ölçeklenmiş Tensör Çıktısı:", result)
 
 ```bash
 $ synapse run pipeline.syn
-Ölçeklenmiş Tensör Çıktısı: tensor(3.4641016151377544)
+Ölçeklenmiş Tensör Çıktısı: tensor(3.4641016151377544, requires_grad=True)
 ```
 
 ---
@@ -393,35 +393,43 @@ Harici web çatısı gerektirmeyen entegre mikroservis motoru:
 fn handle_status(req):
     return {
         "status": "active",
-        "engine": "Synapse AOT C99",
-        "binary_size": "0.21 MB"
+        "engine": "Synapse"
     }
 
 fn handle_chat(req):
-    # LLM token çıktılarını istemciye doğrudan Server-Sent Events ile akıt
-    return sse_stream(tokens)
+    # Token'ları istemciye Server-Sent Events ile akıt
+    let tokens = ["Hello", " from", " Synapse"]
+    return sse_response(tokens)
 
-let app = web.create_server(port=8080)
-app.get("/api/status", handle_status)
-app.post("/api/chat", handle_chat)
-app.listen()
+serve(port=8080, routes={
+    "GET /api/status": handle_status,
+    "POST /api/chat": handle_chat
+})
 ```
 
 ### 4. Desen Eşleme (`match / case`) & Hata Yayma (`?`)
 
 ```python
 # Rust tarzı ? operatörü ile Result / Option açma
-fn load_model(path: str) -> Result[Tensor, str]:
-    let file = open_file(path)?
-    let weights = parse_safetensors(file)?
-    return Result.Ok(weights)
+fn parse_dim(text: str) -> Result[int, str]:
+    if text == "":
+        return Err("boş boyut")
+    return Ok(int(text))
 
-# Kapsayıcı (exhaustive) desen eşleme
-match result:
-    case Result.Ok(weights):
-        print("Model başarıyla yüklendi:", weights.shape)
-    case Result.Err(err):
-        print("Model yüklenemedi:", err)
+fn parse_shape(rows: str, cols: str) -> Result[list, str]:
+    let r = parse_dim(rows)?   # ayrıştırma başarısızsa Err'i hemen döndürür
+    let c = parse_dim(cols)?
+    return Ok([r, c])
+
+# Koşullu (guard) desen eşleme
+for args in [["3", "4"], ["3", ""]]:
+    match parse_shape(args[0], args[1]):
+        case Ok(shape) if shape[0] == shape[1]:
+            print("Kare şekil:", shape)
+        case Ok(shape):
+            print("Şekil:", shape)
+        case Err(err):
+            print("Geçersiz şekil:", err)
 ```
 
 ---

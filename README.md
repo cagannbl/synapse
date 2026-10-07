@@ -70,7 +70,7 @@ print("Scaled Tensor Output:", result)
 
 ```bash
 $ synapse run pipeline.syn
-Scaled Tensor Output: tensor(3.4641016151377544)
+Scaled Tensor Output: tensor(3.4641016151377544, requires_grad=True)
 ```
 
 ---
@@ -393,35 +393,43 @@ High-throughput embedded networking without external web frameworks:
 fn handle_status(req):
     return {
         "status": "active",
-        "engine": "Synapse AOT C99",
-        "binary_size": "0.21 MB"
+        "engine": "Synapse"
     }
 
 fn handle_chat(req):
-    # Stream LLM token outputs directly to clients via Server-Sent Events
-    return sse_stream(tokens)
+    # Stream tokens to the client as Server-Sent Events
+    let tokens = ["Hello", " from", " Synapse"]
+    return sse_response(tokens)
 
-let app = web.create_server(port=8080)
-app.get("/api/status", handle_status)
-app.post("/api/chat", handle_chat)
-app.listen()
+serve(port=8080, routes={
+    "GET /api/status": handle_status,
+    "POST /api/chat": handle_chat
+})
 ```
 
 ### 4. Pattern Matching (`match / case`) & Error Propagation (`?`)
 
 ```python
-# Result / Option Unwrapping with rust-style ? operator
-fn load_model(path: str) -> Result[Tensor, str]:
-    let file = open_file(path)?
-    let weights = parse_safetensors(file)?
-    return Result.Ok(weights)
+# Result / Option unwrapping with the rust-style ? operator
+fn parse_dim(text: str) -> Result[int, str]:
+    if text == "":
+        return Err("empty dimension")
+    return Ok(int(text))
 
-# Exhaustive pattern matching
-match result:
-    case Result.Ok(weights):
-        print("Model loaded successfully:", weights.shape)
-    case Result.Err(err):
-        print("Failed to load model:", err)
+fn parse_shape(rows: str, cols: str) -> Result[list, str]:
+    let r = parse_dim(rows)?   # returns the Err early if parsing fails
+    let c = parse_dim(cols)?
+    return Ok([r, c])
+
+# Pattern matching with guards
+for args in [["3", "4"], ["3", ""]]:
+    match parse_shape(args[0], args[1]):
+        case Ok(shape) if shape[0] == shape[1]:
+            print("Square shape:", shape)
+        case Ok(shape):
+            print("Shape:", shape)
+        case Err(err):
+            print("Invalid shape:", err)
 ```
 
 ---
