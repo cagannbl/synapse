@@ -75,6 +75,17 @@ Scaled Tensor Output: tensor(3.4641016151377544)
 
 ---
 
+## 🧭 Project Status & Module Stability
+
+Synapse is a young, single-maintainer project. The **core** is where testing and design effort go; everything marked **experimental** works in the test suite but its API may change or move to a separate package.
+
+| Status | Modules |
+|---|---|
+| **Core** | `synapse/lexer`, `synapse/parser`, `synapse/analyzer`, `synapse/vm`, `synapse/codegen` (C99 backend), `synapse/runtime`, `synapse/core` (tensors & autograd), `synapse/nn`, `synapse/optim`, `synapse/cli.py`, `synapse/lsp` |
+| **Experimental** | `synapse/ai` (agents, swarms, LLM providers), `synapse/web`, `synapse/orm`, `packages/`, `synapse/pkg`, `synapse/mcp_server.py`, WASM / CUDA interop |
+
+---
+
 ## ⚖️ "Why Synapse?" — Resolving the Big Trade-Offs
 
 Modern AI systems engineering suffers from CPython's 30-year legacy technical debt and container bloat. While PyTorch models execute on GPUs in microseconds, CPU glue-code stalls on GIL lock contention and serialization overhead.

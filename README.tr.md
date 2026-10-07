@@ -75,6 +75,17 @@ $ synapse run pipeline.syn
 
 ---
 
+## 🧭 Proje Durumu ve Modül Kararlılığı
+
+Synapse genç ve tek geliştiricili bir proje. Test ve tasarım emeği **çekirdek** modüllere odaklanıyor; **deneysel** olarak işaretlenen modüller test paketinde çalışır ancak API'leri değişebilir veya ayrı bir pakete taşınabilir.
+
+| Durum | Modüller |
+|---|---|
+| **Çekirdek** | `synapse/lexer`, `synapse/parser`, `synapse/analyzer`, `synapse/vm`, `synapse/codegen` (C99 arka ucu), `synapse/runtime`, `synapse/core` (tensörler ve autograd), `synapse/nn`, `synapse/optim`, `synapse/cli.py`, `synapse/lsp` |
+| **Deneysel** | `synapse/ai` (ajanlar, swarm, LLM sağlayıcıları), `synapse/web`, `synapse/orm`, `packages/`, `synapse/pkg`, `synapse/mcp_server.py`, WASM / CUDA birlikte çalışabilirliği |
+
+---
+
 ## ⚖️ "Why Synapse?" — Büyük Çelişkileri Çözen 4'lü Karşılaştırma
 
 Modern yapay zekâ mühendisliği, CPython'ın 30 yıllık teknik borcu ve mikroservis şişkinliğiyle boğuşuyor. PyTorch modelleri GPU'da mikrosaniyelerde koşarken, CPU tarafındaki yapıştırıcı kod (glue-code) GIL ve bellek kopyalama nedeniyle tıkanıyor. 
