@@ -6,7 +6,7 @@ from synapse.parser.ast_nodes import (
     PipeExpr, CallExpr, MemberExpr, IndexExpr, ListLiteralExpr, DictLiteralExpr,
     TensorLiteralExpr, VarDeclStmt, AssignStmt, ExprStmt, ReturnStmt, PassStmt,
     BreakStmt, ContinueStmt, IfStmt, WhileStmt, ForStmt, FunctionDef, ImportStmt,
-    PromptDef, AgentDef, ToolDef, StructDef, EnumDeclStmt
+    PromptDef, AgentDef, ToolDef, StructDef, EnumDeclStmt, MatchStmt, TryExpr
 )
 
 
@@ -57,6 +57,7 @@ class Compiler:
         self.loop_starts: list[int] = []
         self.loop_breaks: list[list[int]] = []
         self.loop_continues: list[list[int]] = []
+        self.match_counter: int = 0
 
         if options is not None:
             self.options = options
@@ -182,8 +183,99 @@ class Compiler:
             jump_idx = self.code.emit(Opcode.JUMP, 0, line=stmt.line)
             self.loop_continues[-1].append(jump_idx)
 
+        elif isinstance(stmt, MatchStmt):
+            self.compile_match(stmt)
+
         elif isinstance(stmt, (PassStmt, StructDef, EnumDeclStmt)):
             pass
+
+        else:
+            raise NotImplementedError(f"Statement {type(stmt).__name__} not supported by the bytecode compiler")
+
+    _MATCH_CTORS = ("Some", "Ok", "Err")
+
+    def compile_match(self, stmt: MatchStmt):
+        """match/case: cases are tried top to bottom; the first matching one runs."""
+        line = stmt.line
+        self.match_counter += 1
+        subj_idx = self.code.add_name(f"__match_subj_{self.match_counter}")
+        res_idx = self.code.add_name(f"__match_res_{self.match_counter}")
+        helper_idx = self.code.add_name("__syn_match_ctor__")
+
+        self.compile_expr(stmt.subject)
+        self.code.emit(Opcode.STORE_NAME, subj_idx, line=line)
+
+        end_jumps: list[int] = []
+        for case in stmt.cases:
+            case_line = case.line or line
+            fail_jumps: list[int] = []
+            p = case.pattern
+
+            ctor = None
+            sub = None
+            if isinstance(p, LiteralExpr) and p.value is None:
+                ctor = "None"
+            elif isinstance(p, IdentifierExpr) and p.name == "None":
+                ctor = "None"
+            elif isinstance(p, MemberExpr) and p.member == "None":
+                ctor = "None"
+            elif isinstance(p, CallExpr):
+                callee = p.callee
+                name = callee.name if isinstance(callee, IdentifierExpr) else getattr(callee, "member", None)
+                if name in self._MATCH_CTORS:
+                    ctor = name
+                    sub = p.args[0] if p.args else None
+
+            if ctor is not None:
+                # (matched, inner) = __syn_match_ctor__(subject, ctor)
+                self.code.emit(Opcode.LOAD_NAME, helper_idx, line=case_line)
+                self.code.emit(Opcode.LOAD_NAME, subj_idx, line=case_line)
+                self.code.emit(Opcode.LOAD_CONST, self.code.add_const(ctor), line=case_line)
+                self.code.emit(Opcode.CALL_FUNCTION, 2, line=case_line)
+                self.code.emit(Opcode.STORE_NAME, res_idx, line=case_line)
+                self._emit_match_res_item(res_idx, 0, case_line)
+                fail_jumps.append(self.code.emit(Opcode.JUMP_IF_FALSE, 0, line=case_line))
+                if isinstance(sub, IdentifierExpr):
+                    if sub.name != "_":
+                        self._emit_match_res_item(res_idx, 1, case_line)
+                        self.code.emit(Opcode.STORE_NAME, self.code.add_name(sub.name), line=case_line)
+                elif sub is not None:
+                    self._emit_match_res_item(res_idx, 1, case_line)
+                    self.compile_expr(sub)
+                    self.code.emit(Opcode.COMPARE_OP, "==", line=case_line)
+                    fail_jumps.append(self.code.emit(Opcode.JUMP_IF_FALSE, 0, line=case_line))
+            elif isinstance(p, IdentifierExpr):
+                # '_' matches anything; any other bare name captures the subject.
+                if p.name != "_":
+                    self.code.emit(Opcode.LOAD_NAME, subj_idx, line=case_line)
+                    self.code.emit(Opcode.STORE_NAME, self.code.add_name(p.name), line=case_line)
+            else:
+                # Value pattern: literals, enum members, expressions.
+                self.code.emit(Opcode.LOAD_NAME, subj_idx, line=case_line)
+                self.compile_expr(p)
+                self.code.emit(Opcode.COMPARE_OP, "==", line=case_line)
+                fail_jumps.append(self.code.emit(Opcode.JUMP_IF_FALSE, 0, line=case_line))
+
+            if case.guard is not None:
+                self.compile_expr(case.guard)
+                fail_jumps.append(self.code.emit(Opcode.JUMP_IF_FALSE, 0, line=case_line))
+
+            for s in case.body:
+                self.compile_stmt(s)
+            end_jumps.append(self.code.emit(Opcode.JUMP, 0, line=case_line))
+
+            next_case = len(self.code.instructions)
+            for j in fail_jumps:
+                self.code.instructions[j] = (Opcode.JUMP_IF_FALSE, next_case)
+
+        end = len(self.code.instructions)
+        for j in end_jumps:
+            self.code.instructions[j] = (Opcode.JUMP, end)
+
+    def _emit_match_res_item(self, res_idx: int, item: int, line: int):
+        self.code.emit(Opcode.LOAD_NAME, res_idx, line=line)
+        self.code.emit(Opcode.LOAD_CONST, self.code.add_const(item), line=line)
+        self.code.emit(Opcode.BINARY_SUBSCR, line=line)
 
     def compile_if(self, stmt: IfStmt):
         # condition
@@ -245,36 +337,36 @@ class Compiler:
         self.loop_starts.pop()
 
     def compile_for(self, stmt: ForStmt):
-        # for i in iterable -> iterable'ı derle, index/length ile iterasyon
-        # Basit for döngüsü: iterator/list üzerinden
+        # for x in iterable -> uses the iterator protocol, so lists, dicts, ranges,
+        # generators and channels all work.
+        iter_fn = self.code.add_name("__syn_iter__")
+        next_fn = self.code.add_name("__syn_next__")
+        self.code.emit(Opcode.LOAD_NAME, iter_fn, line=stmt.line)
         self.compile_expr(stmt.iterable)
-        name_idx = self.code.add_name(f"__iter_{stmt.target}")
+        self.code.emit(Opcode.CALL_FUNCTION, 1, line=stmt.line)
+        self.match_counter += 1
+        name_idx = self.code.add_name(f"__iter_{self.match_counter}")
         self.code.emit(Opcode.STORE_NAME, name_idx, line=stmt.line)
-
-        # __idx = 0
-        zero_idx = self.code.add_const(0)
-        self.code.emit(Opcode.LOAD_CONST, zero_idx, line=stmt.line)
-        idx_var = self.code.add_name(f"__idx_{stmt.target}")
-        self.code.emit(Opcode.STORE_NAME, idx_var, line=stmt.line)
+        step_var = self.code.add_name(f"__step_{self.match_counter}")
 
         loop_start = len(self.code.instructions)
         self.loop_starts.append(loop_start)
         self.loop_breaks.append([])
         self.loop_continues.append([])
 
-        # condition: __idx < len(__iter)
-        self.code.emit(Opcode.LOAD_NAME, idx_var, line=stmt.line)
-        len_name = self.code.add_name("len")
-        self.code.emit(Opcode.LOAD_NAME, len_name, line=stmt.line)
-        # call len(__iter)
+        # (has_value, value) = __syn_next__(__iter)
+        self.code.emit(Opcode.LOAD_NAME, next_fn, line=stmt.line)
         self.code.emit(Opcode.LOAD_NAME, name_idx, line=stmt.line)
         self.code.emit(Opcode.CALL_FUNCTION, 1, line=stmt.line)
-        self.code.emit(Opcode.COMPARE_OP, "<", line=stmt.line)
+        self.code.emit(Opcode.STORE_NAME, step_var, line=stmt.line)
+        self.code.emit(Opcode.LOAD_NAME, step_var, line=stmt.line)
+        self.code.emit(Opcode.LOAD_CONST, self.code.add_const(0), line=stmt.line)
+        self.code.emit(Opcode.BINARY_SUBSCR, line=stmt.line)
         exit_jump = self.code.emit(Opcode.JUMP_IF_FALSE, 0, line=stmt.line)
 
-        # stmt.target = __iter[__idx]
-        self.code.emit(Opcode.LOAD_NAME, name_idx, line=stmt.line)
-        self.code.emit(Opcode.LOAD_NAME, idx_var, line=stmt.line)
+        # stmt.target = value
+        self.code.emit(Opcode.LOAD_NAME, step_var, line=stmt.line)
+        self.code.emit(Opcode.LOAD_CONST, self.code.add_const(1), line=stmt.line)
         self.code.emit(Opcode.BINARY_SUBSCR, line=stmt.line)
         target_name = self.code.add_name(stmt.target)
         self.code.emit(Opcode.STORE_NAME, target_name, line=stmt.line)
@@ -283,17 +375,9 @@ class Compiler:
         for s in stmt.body:
             self.compile_stmt(s)
 
-        # Step position: continue statement jumps here so __idx is incremented
-        step_pos = len(self.code.instructions)
+        # continue jumps straight to fetching the next item
         for cont in self.loop_continues.pop():
-            self.code.instructions[cont] = (Opcode.JUMP, step_pos)
-
-        # __idx += 1
-        self.code.emit(Opcode.LOAD_NAME, idx_var, line=stmt.line)
-        one_const = self.code.add_const(1)
-        self.code.emit(Opcode.LOAD_CONST, one_const, line=stmt.line)
-        self.code.emit(Opcode.BINARY_ADD, line=stmt.line)
-        self.code.emit(Opcode.STORE_NAME, idx_var, line=stmt.line)
+            self.code.instructions[cont] = (Opcode.JUMP, loop_start)
 
         self.code.emit(Opcode.JUMP, loop_start, line=stmt.line)
 
@@ -396,6 +480,21 @@ class Compiler:
             attr_idx = self.code.add_name(expr.member)
             self.code.emit(Opcode.LOAD_ATTR, attr_idx, line=line)
 
+        elif isinstance(expr, TryExpr):
+            # expr? -> unwrap Ok/Some, or return the Err/None from the enclosing function
+            self.match_counter += 1
+            tmp_idx = self.code.add_name(f"__try_res_{self.match_counter}")
+            self.code.emit(Opcode.LOAD_NAME, self.code.add_name("__syn_try__"), line=line)
+            self.compile_expr(expr.expr)
+            self.code.emit(Opcode.CALL_FUNCTION, 1, line=line)
+            self.code.emit(Opcode.STORE_NAME, tmp_idx, line=line)
+            self._emit_match_res_item(tmp_idx, 0, line)
+            ok_jump = self.code.emit(Opcode.JUMP_IF_TRUE, 0, line=line)
+            self._emit_match_res_item(tmp_idx, 1, line)
+            self.code.emit(Opcode.RETURN_VALUE, line=line)
+            self.code.instructions[ok_jump] = (Opcode.JUMP_IF_TRUE, len(self.code.instructions))
+            self._emit_match_res_item(tmp_idx, 1, line)
+
         elif isinstance(expr, IndexExpr):
             self.compile_expr(expr.target)
             self.compile_expr(expr.index)
@@ -422,6 +521,9 @@ class Compiler:
                 self.compile_expr(v)
             self.code.emit(Opcode.BUILD_DICT, len(expr.kwargs), line=line)
             self.code.emit(Opcode.BUILD_TENSOR, line=line)
+
+        else:
+            raise NotImplementedError(f"Expression {type(expr).__name__} not supported by the bytecode compiler")
 
     def _emit_binary_op(self, op: str, line: int = 1):
         op_map = {
