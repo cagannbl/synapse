@@ -16,11 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="tests/"><img src="https://img.shields.io/badge/Tests-986%2F986%20Passing-10b981?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Tests 986/986 Passing" /></a>
+  <a href="https://github.com/cagannbl/synapse/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/cagannbl/synapse/tests.yml?branch=main&style=for-the-badge&label=Tests" alt="Tests" /></a>
   <a href="examples/edge_nanogpt/"><img src="https://img.shields.io/badge/Binary%20Size-0.21%20MB-18181b?style=for-the-badge&logo=speedtest&logoColor=white" alt="Binary Size 0.21 MB" /></a>
   <a href="docs/architecture/positioning.md"><img src="https://img.shields.io/badge/Memory-Zero%20GC%20%7C%20O(1)%20Arena-27272a?style=for-the-badge&logo=ram&logoColor=white" alt="Deterministic Arena" /></a>
   <a href="synapse/codegen/"><img src="https://img.shields.io/badge/C99%20AOT-ISO%20Compliant-3f3f46?style=for-the-badge&logo=c&logoColor=white" alt="C99 ISO Compliant" /></a>
-  <a href="https://github.com/cagannbl/synapse/community"><img src="https://img.shields.io/badge/GitHub%20Health-100%25-0ea5e9?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Topluluk Sağlığı" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-52525b?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
@@ -51,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 ```bash
 # Linux / macOS (POSIX) - Sıfır yetki karmaşası, yerel ~/.synapse kurulumu
-curl -fsSL https://get.synapse-lang.org/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.sh | bash
 # ya da repo içinden:
 ./scripts/install.sh
 ```
@@ -71,8 +70,19 @@ print("Ölçeklenmiş Tensör Çıktısı:", result)
 
 ```bash
 $ synapse run pipeline.syn
-Ölçeklenmiş Tensör Çıktısı: 3.872983
+Ölçeklenmiş Tensör Çıktısı: tensor(3.4641016151377544)
 ```
+
+---
+
+## 🧭 Proje Durumu ve Modül Kararlılığı
+
+Synapse genç ve tek geliştiricili bir proje. Test ve tasarım emeği **çekirdek** modüllere odaklanıyor; **deneysel** olarak işaretlenen modüller test paketinde çalışır ancak API'leri değişebilir veya ayrı bir pakete taşınabilir.
+
+| Durum | Modüller |
+|---|---|
+| **Çekirdek** | `synapse/lexer`, `synapse/parser`, `synapse/analyzer`, `synapse/vm`, `synapse/codegen` (C99 arka ucu), `synapse/runtime`, `synapse/core` (tensörler ve autograd), `synapse/nn`, `synapse/optim`, `synapse/cli.py`, `synapse/lsp` |
+| **Deneysel** | `synapse/ai` (ajanlar, swarm, LLM sağlayıcıları), `synapse/web`, `synapse/orm`, `packages/`, `synapse/pkg`, `synapse/mcp_server.py`, WASM / CUDA birlikte çalışabilirliği |
 
 ---
 

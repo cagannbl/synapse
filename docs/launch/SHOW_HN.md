@@ -6,7 +6,7 @@ Show HN: Synapse – An AI-native systems language that transpiles to 0.21MB sta
 ```
 
 **Target Link:** `https://github.com/synapse-lang/synapse`  
-**Web Demo / Interactive Playground:** `https://synapse-lang.org/playground`
+**Web Demo / Interactive Playground:** `https://github.com/cagannbl/synapse/tree/main/playground`
 
 ---
 
@@ -17,7 +17,7 @@ Hi Hacker News,
 We are the Synapse team, and along with our open-source contributors, we’ve spent the past year building **Synapse**: an open-source, AI-native systems programming language that marries Python’s high-level syntax with the zero-overhead bare-metal execution of ISO C99.
 
 Repo: [https://github.com/synapse-lang/synapse](https://github.com/synapse-lang/synapse)  
-Interactive WASM Playground: [https://synapse-lang.org/playground](https://synapse-lang.org/playground)
+Interactive WASM Playground: [https://github.com/cagannbl/synapse/tree/main/playground](https://github.com/cagannbl/synapse/tree/main/playground)
 
 ---
 

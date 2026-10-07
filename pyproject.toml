@@ -12,6 +12,10 @@ dependencies = [
     "numpy",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=1.2,<2"]
+test = ["pytest>=7", "mcp>=1.2,<2"]
+
 [project.scripts]
 synapse = "synapse.cli:main"
 

@@ -17,12 +17,9 @@ If you discover a potential security vulnerability in Synapse AI, please report 
 
 ### How to Report
 
-1. **GitHub Security Advisory (Preferred):**
+**GitHub Security Advisory:**
    - Navigate to the [Security Advisories](https://github.com/cagannbl/synapse/security/advisories) tab on GitHub and click "Report a vulnerability".
    - Provide detailed reproduction steps, environment details, and an example minimal `.syn` script or input.
-
-2. **Direct Contact:**
-   - Email: [security@synapse-lang.org](mailto:security@synapse-lang.org)
 
 ### What to Expect
 

@@ -3,7 +3,7 @@
 # Synapse AI-Native Programming Language - POSIX One-Liner Demo Quickstart
 # Supported OS: Linux, macOS, WSL, BSD
 # Usage:
-#   curl -fsSL https://get.synapse-lang.org/demo.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/demo.sh | sh
 #   or locally: ./scripts/demo.sh [preset]
 #   Presets: nanogpt (default), matmul, tour, dataloader, all
 # ==============================================================================
@@ -80,5 +80,5 @@ done
 
 printf "\n\033[90m======================================================\033[0m\n"
 printf "\033[32m  Synapse Quickstart Demo Finished!\033[0m\n"
-printf "\033[36m  Install Full CLI: curl -fsSL https://get.synapse-lang.org/install.sh | bash\033[0m\n"
+printf "\033[36m  Install Full CLI: curl -fsSL https://raw.githubusercontent.com/cagannbl/synapse/main/scripts/install.sh | bash\033[0m\n"
 printf "\033[90m======================================================\033[0m\n"

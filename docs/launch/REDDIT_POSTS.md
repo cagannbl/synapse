@@ -22,7 +22,7 @@ Worse, Python’s Global Interpreter Lock (GIL) starves GPU compute pipelines be
 To fix this, we built **Synapse AI**: an open-source, compiled language that combines Python’s syntax elegance with bare-metal ISO C99 compilation.
 
 - **GitHub:** [https://github.com/synapse-lang/synapse](https://github.com/synapse-lang/synapse)
-- **Interactive WASM Playground:** [https://synapse-lang.org/playground](https://synapse-lang.org/playground)
+- **Interactive WASM Playground:** [https://github.com/cagannbl/synapse/tree/main/playground](https://github.com/cagannbl/synapse/tree/main/playground)
 
 ### Why Emit C99 Instead of LLVM IR?
 When architecting our backend, we deliberately chose to transpile into strict, portable **ISO C99** rather than targeting LLVM IR or writing a custom assembler:
@@ -98,7 +98,7 @@ Because Python is dynamically typed, dimension mismatches cannot be caught until
 We built **Synapse** to bring compile-time formal verification and systems-level efficiency to deep learning.
 
 - **Repository:** [https://github.com/synapse-lang/synapse](https://github.com/synapse-lang/synapse)
-- **Documentation:** [https://synapse-lang.org/docs](https://synapse-lang.org/docs)
+- **Documentation:** [https://github.com/cagannbl/synapse/tree/main/docs](https://github.com/cagannbl/synapse/tree/main/docs)
 
 ### 1. Symbolic Compile-Time Shape Guard
 In Synapse, tensor dimensions are first-class types. You can define shape contracts on functions:
@@ -164,7 +164,7 @@ If you’re running local AI models on a home server, Mac Mini, or Raspberry Pi,
 We created **Synapse**: an AI-native systems language that compiles directly to a standalone **0.21MB binary** that can run local multi-agent swarms, RAG memory systems, and web inference servers with **zero external runtime dependencies**.
 
 - **GitHub:** [https://github.com/synapse-lang/synapse](https://github.com/synapse-lang/synapse)
-- **Edge WASM Demo:** [https://synapse-lang.org/playground](https://synapse-lang.org/playground)
+- **Edge WASM Demo:** [https://github.com/cagannbl/synapse/tree/main/playground](https://github.com/cagannbl/synapse/tree/main/playground)
 
 ### Built-in Primitives for Local AI & Multi-Agent Swarms
 

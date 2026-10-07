@@ -53,7 +53,7 @@ BUILTIN_PACKAGES: dict[str, dict[str, Any]] = {
         "name": "synapse-nn",
         "version": "0.2.0",
         "description": "Neural network layers, activations, optimizers, and loss functions for Synapse AI",
-        "author": "Synapse AI Core Team <core@synapse-lang.org>",
+        "author": "Synapse Contributors",
         "entry": "index.syn",
         "tags": ["nn", "deep-learning", "neural-network", "ai"],
         "files": {
@@ -91,7 +91,7 @@ BUILTIN_PACKAGES: dict[str, dict[str, Any]] = {
         "name": "synapse-vision",
         "version": "0.1.5",
         "description": "Computer vision models, image transforms, and datasets for Synapse AI",
-        "author": "Synapse Vision Team <vision@synapse-lang.org>",
+        "author": "Synapse Contributors",
         "entry": "index.syn",
         "tags": ["vision", "cv", "image-processing", "transforms"],
         "files": {
@@ -122,7 +122,7 @@ BUILTIN_PACKAGES: dict[str, dict[str, Any]] = {
         "name": "synapse-nlp",
         "version": "0.1.2",
         "description": "Natural language processing, tokenizers, and embeddings for Synapse AI",
-        "author": "Synapse NLP Team <nlp@synapse-lang.org>",
+        "author": "Synapse Contributors",
         "entry": "index.syn",
         "tags": ["nlp", "text", "tokenizer", "transformers", "llm"],
         "files": {
@@ -151,7 +151,7 @@ BUILTIN_PACKAGES: dict[str, dict[str, Any]] = {
         "name": "synapse-math",
         "version": "0.3.0",
         "description": "Advanced linear algebra, matrix decompositions, and numerical algorithms",
-        "author": "Synapse Math Team <math@synapse-lang.org>",
+        "author": "Synapse Contributors",
         "entry": "index.syn",
         "tags": ["math", "linear-algebra", "linalg", "scientific"],
         "files": {

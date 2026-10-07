@@ -83,7 +83,7 @@ Synapse isn’t just for math. Modern AI primitives are built into the language 
 Synapse v3.0.0 is 100% open-source under the MIT license with 827 passing tests.
 
 ⭐ Star the repo: https://github.com/synapse-lang/synapse
-🌐 Try in-browser WASM Playground: https://synapse-lang.org/playground
+🌐 Try in-browser WASM Playground: https://github.com/cagannbl/synapse/tree/main/playground
 🤝 Check CONTRIBUTING.md for 5 curated "Good First Issues"
 
 🔁 Retweet the first tweet if you're ready for an AI-native compiled future! 🚀

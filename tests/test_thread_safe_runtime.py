@@ -91,7 +91,7 @@ int main(void) {{
         if compiler_type == "zig":
             cmd = [compiler_path, "cc", src_file, runtime_c, f"-I{runtime_dir}", "-O2", "-o", exe_file]
         elif compiler_type in ("gcc", "clang"):
-            cmd = [compiler_path, src_file, runtime_c, f"-I{runtime_dir}", "-O2", "-pthread", "-o", exe_file]
+            cmd = [compiler_path, src_file, runtime_c, f"-I{runtime_dir}", "-O2", "-pthread", "-o", exe_file, "-lm"]
         elif compiler_type == "cl":
             cmd = [compiler_path, src_file, runtime_c, f"/I{runtime_dir}", "/O2", f"/Fe:{exe_file}"]
         else:

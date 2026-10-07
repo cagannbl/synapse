@@ -303,7 +303,7 @@ def test_bind_standard_c_runtime_string_functions():
 
     # puts returns int (0 on success) and writes to stdout
     ret = bindings.puts("Testing puts from Synapse C-Bind")
-    assert ret == 0
+    assert ret >= 0  # C standard: non-negative on success
 
     # strlen converts str -> char_p and returns size_t
     assert bindings.strlen("Synapse AI") == 10
@@ -718,7 +718,7 @@ def test_bind_manager_with_cdll_and_cdynamiclibrary_instances():
     header = "int abs(int n); double sqrt(double x);"
 
     # Pass ctypes.CDLL directly
-    cdll = ctypes.cdll.msvcrt
+    cdll = ctypes.cdll.msvcrt if os.name == "nt" else ctypes.CDLL(None)
     res1 = mgr.bind_header(header, cdll)
     assert res1.abs(-123) == 123
 
