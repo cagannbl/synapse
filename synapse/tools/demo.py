@@ -284,7 +284,7 @@ def run_demo_tour(interactive: bool = True) -> int:
                 "id": 5,
                 "title": "Adım 5: No-GIL Eşzamanlılık & CSP Kanalları",
                 "description": "Python'ın GIL bariyeri olmadan, Go/Erlang tarzı hafif görevler (spawn) ve Channel.",
-                "code": "let ch = Channel(2)\nlet worker = spawn(producer)\nlet msg = ch.receive()"
+                "code": "let ch = Channel(2)\nlet worker = spawn(producer)\nlet msg = ch.recv()"
             },
             {
                 "id": 6,

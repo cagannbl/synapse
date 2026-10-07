@@ -6,7 +6,7 @@ import time
 from typing import Any, Callable, Optional
 from synapse.vm.opcodes import Opcode
 from synapse.vm.compiler import CodeObject
-from synapse.parser.ast_nodes import Some, Ok, Err, Option, Result, _NoneOption, NoneOption
+from synapse.parser.ast_nodes import Some, Ok, Err, Option, Result, _NoneOption, NoneOption, LiteralExpr
 from synapse.core.tensor import Tensor, tensor, zeros, ones, randn, QuantizedTensor, quantize, dequantize
 from synapse.core.autograd import grad
 from synapse.core.generators import TokenStream, SynapseGenerator, StreamPipeline
@@ -135,11 +135,20 @@ from synapse.ai.agent_runtime import AgentRuntime
 
 
 class PromptObject:
-    def __init__(self, name: str, params: list[str], fields: dict[str, Any], vm: "VirtualMachine"):
+    def __init__(
+        self,
+        name: str,
+        params: list[str],
+        fields: dict[str, Any],
+        vm: "VirtualMachine",
+        scope: Optional[dict[str, Any]] = None,
+    ):
         self.name = name
         self.params = params
         self.fields = fields
         self.vm = vm
+        # Variables visible where the prompt was defined (like a closure)
+        self.scope = scope if scope is not None else {}
         self.engine = PromptEngine()
 
     def __call__(self, *args, **kwargs) -> Any:
@@ -165,16 +174,19 @@ class PromptObject:
         if field_name not in self.fields:
             return None
         expr = self.fields[field_name]
-        if hasattr(expr, "value"):
+        if isinstance(expr, LiteralExpr):
             val = expr.value
             if isinstance(val, str):
                 for k, v in param_dict.items():
                     val = val.replace(f"{{{k}}}", str(v))
-                return val
             return val
-        elif hasattr(expr, "name") and expr.name in param_dict:
-            return param_dict[expr.name]
-        return str(expr)
+        # Any other field is an expression (e.g. "Translate to " + lang): evaluate it.
+        from synapse.vm.compiler import Compiler
+
+        compiler = Compiler(name=f"<prompt {self.name}.{field_name}>")
+        compiler.compile_expr(expr)
+        compiler.code.emit(Opcode.RETURN_VALUE)
+        return self.vm.run_code(compiler.code, {**self.vm.globals, **self.scope, **param_dict})
 
 
 class Frame:
@@ -677,7 +689,7 @@ class VirtualMachine:
 
                 elif opcode == Opcode.DEFINE_PROMPT:
                     name, params, fields = code.constants[arg]
-                    prompt_obj = PromptObject(name, params, fields, self)
+                    prompt_obj = PromptObject(name, params, fields, self, scope=frame.locals)
                     frame.stack.append(prompt_obj)
 
                 elif opcode == Opcode.DEFINE_AGENT:

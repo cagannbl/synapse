@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse WebAssembly Interactive Playground</title>
-    <meta name="description" content="Synapse Dilinin WebAssembly AOT ve Tek İş Parçacıklı Cooperative CSP Motoru Canlı İnteraktif Playground'u.">
+    <title>Synapse Playground</title>
+    <meta name="description" content="Synapse programlarını gerçek yorumlayıcıyla çalıştıran yerel playground.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -514,16 +514,16 @@
             <div class="brand-title">
                 <span>Synapse</span>
                 <span style="color: var(--text-muted); font-weight: 400;">/</span>
-                <span style="font-weight: 500; color: #d4d4d8;">WASM Playground</span>
+                <span style="font-weight: 500; color: #d4d4d8;">Playground</span>
             </div>
-            <span class="badge-tag">v1.5.0-wasm</span>
+            <span class="badge-tag">v3.0.0</span>
         </div>
 
         <div class="nav-actions">
             <div id="memoryPill" class="badge-tag" style="display: none;">Heap: 64 KB</div>
             <div class="status-pill">
                 <span id="statusDot" class="status-dot"></span>
-                <span id="statusText">WASM Başlatılıyor...</span>
+                <span id="statusText">Başlatılıyor...</span>
             </div>
         </div>
     </header>
@@ -534,10 +534,10 @@
             <span class="toolbar-label">Örnek:</span>
             <div class="select-wrapper">
                 <select id="exampleSelector" onchange="loadSelectedExample()">
-                    <option value="1">1. Tensor Matris Çarpımı &amp; Autograd Türev Grafı</option>
-                    <option value="2">2. AI Prompt &amp; Gerçek Zamanlı Token Akışı (Stream)</option>
-                    <option value="3">3. LazyFrame Veri Akışı (Apache Arrow &amp; Filter)</option>
-                    <option value="4">4. No-GIL CSP Kanalları (Cooperative Microtask Queue)</option>
+                    <option value="1">1. Tensor Matris Çarpımı &amp; Autograd</option>
+                    <option value="2">2. AI Prompt Şablonları</option>
+                    <option value="3">3. DataFrame Filtreleme</option>
+                    <option value="4">4. CSP Kanalları &amp; İş Parçacıkları</option>
                 </select>
                 <span class="select-icon">&#9662;</span>
             </div>
@@ -601,7 +601,7 @@
 
             <div class="panel-footer">
                 <div class="meta-pill">
-                    <span>Hedef: WebAssembly (SIMD128 / Microtasks)</span>
+                    <span>Motor: Synapse VM (yerel sunucu)</span>
                 </div>
                 <div class="meta-pill">
                     <span>UTF-8 &bull; 4 Boşluk Tab</span>
@@ -627,16 +627,13 @@
             <div id="terminal" class="terminal-container">
                 <div class="log-entry log-info">
                     <span class="log-time">[00:00:00]</span>
-                    <span class="log-text">[Synapse WASM] Web Worker arka plan iş parçacığı hazırlanıyor...</span>
+                    <span class="log-text">[Synapse] Yerel çalışma zamanına bağlanılıyor...</span>
                 </div>
             </div>
 
             <div class="panel-footer">
                 <div class="meta-pill">
                     <span id="execTiming">Süre: 0.00 ms</span>
-                </div>
-                <div class="meta-pill">
-                    <span id="eventLoopStatus">CSP Kuyruğu: 0 Bekleyen</span>
                 </div>
             </div>
         </div>
@@ -645,100 +642,67 @@
     <script>
         // Preset Example Source Codes
         const EXAMPLES = {
-            "1": `# 1. Tensor Matris Çarpımı & Autograd Türev Grafı
-# Donanım seviyesinde AOT derlenen N-Boyutlu Tensör Aritmetiği
-let A = tensor([[1.5, 2.0], [3.0, 4.5]], requires_grad=True)
-let B = tensor([[2.0, -1.0], [0.5, 3.0]], requires_grad=True)
+            "1": `# 1. Tensor matmul & autograd
+let A = tensor([[1.5, 2.0], [3.0, 4.5]], requires_grad=true)
+let B = tensor([[2.0, -1.0], [0.5, 3.0]], requires_grad=true)
 
-# Matris Çarpımı (@) ve Transpoze (.T)
+# Matrix multiplication (@) and transpose (.T)
 let C = A @ B.T
 let loss = (C * 2.0).sum()
 
-print("--- [Synapse Tensor Engine] ---")
-print("Matris A:")
-A.print()
-print("Matris B (Transpoze):")
-B.T.print()
-print("Matris C = A @ B.T:")
-C.print()
-print("Hesaplanan Kayıp (Loss): " + str(loss.item()))
+print("A =", A)
+print("C = A @ B.T =", C)
+print("loss =", loss.item())
 
-# Autograd Geri Yayılımı (Backward Pass)
+# Reverse-mode autodiff
 loss.backward()
-print("Grad A (dLoss / dA):")
-A.grad.print()`,
+print("dLoss/dA =", A.grad)
+print("dLoss/dB =", B.grad)`,
 
-            "2": `# 2. AI Prompt & Gerçek Zamanlı Token Akışı
-# Dil seviyesinde yerleşik LLM prompt motoru ve asenkron SSE/token akışı
-
+            "2": `# 2. Typed prompt templates
+# Without an API key the built-in mock model answers, so this runs offline.
 prompt Translator(target_lang: str, text: str):
-    system: "You are an ultra-fast AI translator specialized in programming."
-    user: "Translate the following text to " + target_lang + ":\\n" + text
+    system: "You are a concise technical translator."
+    user: "Translate to " + target_lang + ": " + text
 
-let source_text = "Synapse delivers C-speed execution with Pythonic elegance and zero GIL overhead."
-print("Hedef Dil: Türkçe")
-print("Kaynak Metin: " + source_text)
-print("--- [Token Akışı Başlatılıyor...] ---")
+let reply = Translator("Turkish", "Synapse checks tensor shapes before your code runs.")
+print(reply)`,
 
-# Akış simülasyonu
-let stream = Translator("Türkçe", source_text).stream()
-for token in stream:
-    print_stream(token)
-
-print("\\n--- [Çıkarım Tamamlandı: 24 token, 142 tok/s] ---")`,
-
-            "3": `# 3. LazyFrame Veri Akışı (Apache Arrow Tablo & Filtreleme)
-# Sütun bazlı (columnar) bellek düzeni ve sıfır kopyalı tensör dönüşümü
-
-let df = dataframe.from_records([
-    {"device": "cuda:0", "flops_tflops": 82.5, "latency_ms": 1.42, "status": "active"},
-    {"device": "cuda:1", "flops_tflops": 83.1, "latency_ms": 1.39, "status": "active"},
-    {"device": "cpu:0",  "flops_tflops": 12.4, "latency_ms": 9.80, "status": "idle"},
-    {"device": "wasm:0", "flops_tflops": 24.8, "latency_ms": 4.15, "status": "active"},
-    {"device": "mps:0",  "flops_tflops": 64.0, "latency_ms": 2.10, "status": "active"}
+            "3": `# 3. DataFrame filtering
+let df = dataframe([
+    {"device": "cuda:0", "tflops": 82.5, "latency_ms": 1.42, "status": "active"},
+    {"device": "cuda:1", "tflops": 83.1, "latency_ms": 1.39, "status": "active"},
+    {"device": "cpu:0",  "tflops": 12.4, "latency_ms": 9.80, "status": "idle"},
+    {"device": "mps:0",  "tflops": 64.0, "latency_ms": 2.10, "status": "active"}
 ])
 
-print("--- [Orijinal Veri Kümesi] ---")
-df.show()
+let active = df.filter(col("status") == "active")
+let fast = active.filter(col("tflops") > 20.0)
+let summary = fast.select(["device", "tflops", "latency_ms"])
 
-# Lazy Pipeline: Filter + Projection + Mean
-let summary = df.filter(col("status") == "active")
-               .filter(col("flops_tflops") > 20.0)
-               .select(["device", "flops_tflops", "latency_ms"])
+print(summary)
+print("Mean TFLOPS of active accelerators:", summary["tflops"].mean())`,
 
-print("--- [Filtrelenmiş Hızlandırıcılar] ---")
-summary.show()
-
-let avg_flops = summary.col("flops_tflops").mean()
-print("Ortalama Aktif TFLOPS: " + str(avg_flops))`,
-
-            "4": `# 4. No-GIL CSP Kanalları & Mikro-Görev Kuyruğu (WASM Cooperative)
-# WebAssembly tarayıcı ortamında bloke olmadan FIFO işleyen kanal mimarisi
-
+            "4": `# 4. Channels & threads (CSP)
 let ch = channel(capacity=4)
 
-fn producer(out_ch, count):
-    print("[Producer] Veri üretimi başlatıldı...")
+fn producer(count):
     for i in range(1, count + 1):
-        let val = "Neural_Tensor_Batch_#" + str(i)
-        print("[Producer] Kanala gönderiliyor: " + val)
-        out_ch.send(val)
-    out_ch.close()
-    print("[Producer] Kanal kapatıldı.")
+        ch.send("batch_" + str(i))
+    ch.close()
+    return count
 
-fn consumer(in_ch):
-    print("[Consumer] Veri dinleniyor...")
-    while not in_ch.is_closed():
-        let item = in_ch.recv()
-        if item is not None:
-            print("[Consumer] Alındı ve işlendi -> " + str(item))
-    print("[Consumer] Tüketim döngüsü tamamlandı.")
+fn consumer():
+    let seen = []
+    # Iterating a channel blocks until it is closed and drained
+    for item in ch:
+        seen.append(item)
+    return seen
 
-# Görevleri kooperatif zamanlayıcıya ekle
-spawn(producer, ch, 4)
-spawn(consumer, ch)
-
-print("--- [CSP Olay Döngüsü Çalıştırılıyor] ---")`
+let p = spawn(producer, 4)
+let c = spawn(consumer)
+print("produced:", p.result())
+print("consumed:", c.result())`
         };
 
         // DOM References
@@ -767,8 +731,8 @@ print("--- [CSP Olay Döngüsü Çalıştırılıyor] ---")`
                     const type = data.type;
 
                     if (type === 'ready') {
-                        setEngineStatus('ready', 'WASM Hazır (Ready)');
-                        appendTerminal(data.info || '[Synapse WASM] Runtime hazır.', 'info');
+                        setEngineStatus('ready', 'Hazır');
+                        appendTerminal(data.info || '[Synapse] Çalışma zamanı hazır.', 'info');
                     } else if (type === 'stdout') {
                         currentChunkTarget = null;
                         appendTerminal(data.text, 'stdout');
@@ -782,7 +746,7 @@ print("--- [CSP Olay Döngüsü Çalıştırılıyor] ---")`
                         appendStreamChunk(data.text);
                     } else if (type === 'done') {
                         currentChunkTarget = null;
-                        setEngineStatus('ready', 'WASM Hazır (Ready)');
+                        setEngineStatus('ready', 'Hazır');
                         isRunning = false;
                         runBtn.disabled = false;
                         runBtn.style.opacity = '1';

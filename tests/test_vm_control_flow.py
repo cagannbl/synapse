@@ -230,3 +230,20 @@ let d = depth(Some(Some(Some(None))))
     )
     assert vm.globals["out"] == [10, 20, 20, 10, 20, 20]
     assert vm.globals["d"] == 3
+
+
+def test_prompt_fields_are_evaluated_as_expressions(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    vm = run(
+        """
+let suffix = "!"
+prompt Greet(name: str):
+    system: "Be brief."
+    user: "Say hi to " + name + suffix
+
+let reply = Greet("Ada")
+"""
+    )
+    assert "Say hi to Ada!" in vm.globals["reply"]
+    assert "BinaryExpr" not in vm.globals["reply"]

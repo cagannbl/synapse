@@ -4,6 +4,7 @@ documentation can't silently drift away from what the language actually does.
 """
 
 import io
+import json
 import os
 import re
 from contextlib import redirect_stdout
@@ -36,6 +37,17 @@ def _example_files():
             if name.endswith(".syn"):
                 path = os.path.join(root, name)
                 yield pytest.param(path, id=os.path.relpath(path, examples_dir))
+
+
+def _playground_programs():
+    with open(os.path.join(BASE_DIR, "playground", "index.html"), encoding="utf-8") as f:
+        html = f.read()
+    block = html[html.index("const EXAMPLES = {"):html.index("// DOM References")]
+    for key, code in re.findall(r'"(\d)": `(.*?)`', block, re.S):
+        yield pytest.param(code.replace("\\`", "`").replace("\\\\", "\\"), id=f"playground-example-{key}")
+    with open(os.path.join(BASE_DIR, "playground", "tour.json"), encoding="utf-8") as f:
+        for i, step in enumerate(json.load(f)["steps"]):
+            yield pytest.param(step["code"], id=f"playground-tour-{i + 1}")
 
 
 @pytest.fixture
@@ -77,3 +89,8 @@ def test_quickstart_output_matches_readme(readme, offline):
     program = re.search(r"```python\n(# pipeline\.syn\n.*?)```", text, re.S).group(1)
     shown = re.search(r"\$ synapse run pipeline\.syn\n(.*?)\n```", text, re.S).group(1)
     assert _run(program).strip() == shown.strip()
+
+
+@pytest.mark.parametrize("program", list(_playground_programs()))
+def test_playground_program_runs(program, offline):
+    _run(program)
