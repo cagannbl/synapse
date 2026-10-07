@@ -3,6 +3,11 @@ Tests for Synapse Native MCP Server (Model Context Protocol) Tools
 """
 
 import json
+
+import pytest
+
+pytest.importorskip("mcp.server.fastmcp", reason="requires the 'mcp' extra (mcp<2)")
+
 from synapse.mcp_server import create_mcp_server
 
 

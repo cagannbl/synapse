@@ -30,7 +30,7 @@ def compile_and_run_synapse(source: str, expected_output_substr: str = ""):
         if comp_type == "zig":
             cmd = [compiler_path, "cc", c_file, nc.runtime_c, f"-I{nc.runtime_dir}", "-O2", "-o", exe_file]
         elif comp_type in ("gcc", "clang"):
-            cmd = [compiler_path, c_file, nc.runtime_c, f"-I{nc.runtime_dir}", "-O2", "-o", exe_file]
+            cmd = [compiler_path, c_file, nc.runtime_c, f"-I{nc.runtime_dir}", "-O2", "-o", exe_file, "-lm"]
         elif comp_type == "cl":
             cmd = [compiler_path, c_file, nc.runtime_c, f"/I{nc.runtime_dir}", "/O2", f"/Fe:{exe_file}"]
         else:

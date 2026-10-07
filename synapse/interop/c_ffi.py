@@ -223,6 +223,9 @@ class CFunction:
 # CDynamicLibrary: Dynamic Library Loader
 # =========================================================================
 
+_C_RUNTIME_ALIASES = ("msvcrt", "msvcrt.dll", "libc", "libc.so", "libc.so.6", "c")
+
+
 class CDynamicLibrary:
     """
     Manages loading of dynamic C libraries (.dll on Windows, .so on Linux, .dylib on macOS)
@@ -236,6 +239,9 @@ class CDynamicLibrary:
 
     def _load_library(self, lib_path: Optional[str]) -> ctypes.CDLL:
         """Loads the requested library or the platform standard C runtime."""
+        # C runtime aliases ('msvcrt', 'libc', ...) resolve to the host platform's runtime.
+        if lib_path is not None and os.name != "nt" and lib_path.lower() in _C_RUNTIME_ALIASES:
+            lib_path = None
         # Case 1: None -> Load system C runtime
         if lib_path is None:
             if os.name == "nt":
@@ -246,7 +252,11 @@ class CDynamicLibrary:
                 except Exception as e:
                     raise SynapseFFIError(f"Failed to load Windows C runtime (msvcrt): {e}") from e
             else:
-                # Linux / macOS
+                # Linux / macOS: process symbols cover both libc and libm (sqrt, sin, ...)
+                try:
+                    return ctypes.CDLL(None)
+                except Exception:
+                    pass
                 libc_name = ctypes.util.find_library("c")
                 if libc_name:
                     return ctypes.CDLL(libc_name)
