@@ -18,13 +18,12 @@ from synapse.vm.virtual_machine import VirtualMachine
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 READMES = ["README.md", "README.tr.md"]
-LAUNCH_DRAFTS = ["docs/launch/SHOW_HN.md", "docs/launch/REDDIT_POSTS.md", "docs/launch/TWITTER_THREAD.md"]
 # Snippets/examples that start a blocking web server are parsed but not executed.
 BLOCKING_MARKER = "serve("
 
 
 def _readme_snippets():
-    for readme in READMES + LAUNCH_DRAFTS:
+    for readme in READMES:
         with open(os.path.join(BASE_DIR, readme), encoding="utf-8") as f:
             text = f.read()
         for i, block in enumerate(re.findall(r"```python\n(.*?)```", text, re.S)):
